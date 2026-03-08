@@ -1,0 +1,8 @@
+* Patient presents for a new patient health check.  States generally feels well.
+* **PMHx:**  Osteoarthritis (right knee), diagnosed 2015.  Mild hypertension, diagnosed 2018. Denies any previous surgeries, hospital admissions, or significant illnesses.
+* **FHx:** Father – MI at 72. Mother – Osteoporosis. Denies any significant family history of cancer or other major illnesses.
+* **SHx:**  Non-smoker.  Social drinks 1-2 glasses of wine per week.  Retired school teacher.  Lives with husband.  Active in local gardening club.
+* **Medications:**
+    * Ramipril 5mg OD
+    * Paracetamol 500mg PRN for pain
+* **Allergies:** NKDA (No Known Drug Allergies)

@@ -1,0 +1,3 @@
+* Patient presents with sudden onset abdominal pain, localized to the lower right quadrant.  Pain started approximately 6 hours ago.
+* Reports nausea and vomiting.  No fever.
+* Denies any trauma.
