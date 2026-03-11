@@ -106,7 +106,7 @@
           <template x-for="(seg, i) in segments" :key="i">
             <span
               x-text="seg.content"
-              :class="seg.type === 'annotation' ? (hoveredAnnotationId === seg.id ? 'bg-amber-200 ring-1 ring-amber-400 rounded' : 'bg-amber-100 rounded') : ''"
+              :class="seg.type === 'annotation' ? (hoveredAnnotationId === seg.id ? `bg-${seg.color}-200 ring-1 ring-${seg.color}-400 rounded` : `bg-${seg.color}-100 rounded`) : ''"
               @mouseenter="seg.type === 'annotation' && (hoveredAnnotationId = seg.id)"
               @mouseleave="seg.type === 'annotation' && (hoveredAnnotationId = null)"
               :data-annotation-id="seg.type === 'annotation' ? seg.id : null"
@@ -516,6 +516,13 @@
   const SUBJECT_ORDER   = ['PATIENT', 'FAMILY', 'OTHER'];
   const CONTEXT_ORDER   = ['CURRENT', 'SUSPECTED', 'HISTORICAL'];
 
+  function annColor(ann) {
+    if (ann.type === 'MEDICATION') return 'teal';
+    if (ann.subject === 'FAMILY') return 'purple';
+    if (ann.subject === 'OTHER') return 'slate';
+    return 'blue';
+  }
+
   function buildSegments(notes, annotations) {
     if (!notes) return [];
     if (!annotations || annotations.length === 0) return [{ type: 'text', content: notes }];
@@ -524,7 +531,7 @@
     for (const ann of annotations) {
       const idx = notes.indexOf(ann.text, searchStart);
       if (idx === -1) continue;
-      ranges.push({ start: idx, end: idx + ann.text.length, id: ann._id });
+      ranges.push({ start: idx, end: idx + ann.text.length, id: ann._id, color: annColor(ann) });
       searchStart = idx + ann.text.length;
     }
     ranges.sort((a, b) => a.start - b.start);
@@ -542,7 +549,7 @@
       if (r.start > pos) {
         segments.push({ type: 'text', content: notes.substring(pos, r.start) });
       }
-      segments.push({ type: 'annotation', content: notes.substring(r.start, r.end), id: r.id });
+      segments.push({ type: 'annotation', content: notes.substring(r.start, r.end), id: r.id, color: r.color });
       pos = r.end;
     }
     if (pos < notes.length) {
