@@ -252,6 +252,12 @@
           </div>
         </div>
 
+        <!-- Timing -->
+        <p x-show="elapsedSeconds !== null"
+           class="text-xs text-slate-400 text-right tabular-nums -mt-2"
+           x-text="`Annotated in ${elapsedSeconds}s`">
+        </p>
+
         <!-- Grouped annotation sections -->
         <template x-for="group in groupedAnnotations" :key="group.subject">
           <div class="flex flex-col gap-2">
@@ -583,6 +589,7 @@
       error:               null,
       annotations:         [],
       hoveredAnnotationId: null,
+      elapsedSeconds:      null,
 
       // ── Computed getters ──────────────────────────────────────
       get hasResults()    { return this.annotations.length > 0; },
@@ -621,9 +628,11 @@
       // ── Methods ───────────────────────────────────────────────
       async annotate() {
         if (!this.notes.trim()) return;
-        this.loading     = true;
-        this.error       = null;
-        this.annotations = [];
+        this.loading        = true;
+        this.error          = null;
+        this.annotations    = [];
+        this.elapsedSeconds = null;
+        const startTime     = Date.now();
 
         try {
           const response = await fetch('/api/annotate', {
@@ -648,6 +657,7 @@
           this.error = e.message || 'An unexpected error occurred. Please try again.';
         } finally {
           this.loading = false;
+          this.elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
         }
       },
 
