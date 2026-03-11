@@ -310,8 +310,9 @@
                   <!-- Row 1: text + buttons -->
                   <div class="flex items-start gap-2">
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-semibold text-slate-800 leading-snug" x-text="ann.text"></p>
-                      <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="ann.normalisedText"></p>
+                      <p class="text-sm font-semibold text-slate-800 leading-snug"
+                         x-text="ann.conceptCode ? ann.conceptDisplay : (ann.normalisedText ? ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1) : ann.text)"></p>
+                      <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="`&quot;${ann.text}&quot;`"></p>
                     </div>
 
                     <!-- Pending: accept + dismiss buttons -->
@@ -396,7 +397,6 @@
                                  bg-violet-100 text-violet-800 ring-1 ring-violet-200"
                       x-text="ann.conceptCode">
                     </span>
-                    <span class="text-xs text-slate-500 truncate" x-text="ann.conceptDisplay"></span>
                   </div>
 
                 </div>
@@ -444,8 +444,9 @@
                 <!-- Row 1: text + buttons -->
                 <div class="flex items-start gap-2">
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-slate-800 leading-snug" x-text="ann.text"></p>
-                    <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="ann.normalisedText"></p>
+                    <p class="text-sm font-semibold text-slate-800 leading-snug"
+                       x-text="ann.conceptCode ? ann.conceptDisplay : (ann.normalisedText ? ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1) : ann.text)"></p>
+                    <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="`&quot;${ann.text}&quot;`"></p>
                   </div>
 
                   <!-- Pending: accept + dismiss -->
@@ -504,7 +505,6 @@
                                bg-violet-100 text-violet-800 ring-1 ring-violet-200"
                     x-text="ann.conceptCode">
                   </span>
-                  <span class="text-xs text-slate-500 truncate" x-text="ann.conceptDisplay"></span>
                 </div>
 
               </div>
