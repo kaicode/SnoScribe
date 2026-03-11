@@ -2,12 +2,24 @@ package org.snomed.annotate.model;
 
 public class Annotation {
 
+	private AnnotationType type;
 	private String text;
 	private String normalisedText;
 	private boolean negated;
 	private Subject subject;
 	private Laterality laterality;
 	private Context context;
+	private String dose;
+	private String frequency;
+	private String route;
+
+	public AnnotationType getType() {
+		return type;
+	}
+
+	public void setType(AnnotationType type) {
+		this.type = type;
+	}
 
 	public String getText() {
 		return text;
@@ -55,5 +67,29 @@ public class Annotation {
 
 	public void setContext(Context context) {
 		this.context = context;
+	}
+
+	public String getDose() {
+		return dose;
+	}
+
+	public void setDose(String dose) {
+		this.dose = dose;
+	}
+
+	public String getFrequency() {
+		return frequency;
+	}
+
+	public void setFrequency(String frequency) {
+		this.frequency = frequency;
+	}
+
+	public String getRoute() {
+		return route;
+	}
+
+	public void setRoute(String route) {
+		this.route = route;
 	}
 }

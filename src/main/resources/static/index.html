@@ -397,6 +397,104 @@
           </div>
         </template>
 
+        <!-- ── Medications section ── -->
+        <div x-show="medicationAnnotations.length > 0" class="flex flex-col gap-2">
+
+          <!-- Section header -->
+          <div class="flex items-center gap-2 px-1">
+            <div class="w-2.5 h-2.5 rounded-full shrink-0 bg-teal-500"></div>
+            <h3 class="text-xs font-bold uppercase tracking-widest text-teal-600">Medications</h3>
+            <span class="ml-auto text-xs text-slate-400 tabular-nums"
+              x-text="medicationAnnotations.filter(a => a.status !== 'dismissed').length + ' shown'">
+            </span>
+          </div>
+
+          <!-- Medication cards -->
+          <template x-for="ann in medicationAnnotations" :key="ann._id">
+            <div
+              x-show="ann.status !== 'dismissed'"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 scale-100"
+              x-transition:leave-end="opacity-0 scale-95"
+              @mouseenter="hoveredAnnotationId = ann._id"
+              @mouseleave="hoveredAnnotationId = null"
+              class="bg-white rounded-2xl border shadow-sm overflow-hidden flex transition-all duration-200"
+              :class="{
+                'border-slate-200':                       ann.status === 'pending',
+                'border-emerald-300 bg-emerald-50/20':   ann.status === 'accepted',
+                'ring-2 ring-blue-400':                   hoveredAnnotationId === ann._id
+              }"
+              :data-annotation-id="ann._id"
+            >
+              <!-- Left accent bar (teal for medications) -->
+              <div class="w-1.5 shrink-0 self-stretch bg-teal-400"></div>
+
+              <!-- Card body -->
+              <div class="flex-1 min-w-0 p-4 flex flex-col gap-2">
+
+                <!-- Row 1: text + buttons -->
+                <div class="flex items-start gap-2">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-800 leading-snug" x-text="ann.text"></p>
+                    <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="ann.normalisedText"></p>
+                  </div>
+
+                  <!-- Pending: accept + dismiss -->
+                  <div class="flex gap-1.5 shrink-0" x-show="ann.status === 'pending'">
+                    <button @click="accept(ann)" title="Accept"
+                      class="w-7 h-7 rounded-lg flex items-center justify-center
+                             bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700
+                             border border-emerald-200 hover:border-emerald-300 transition-all">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </button>
+                    <button @click="dismiss(ann)" title="Dismiss"
+                      class="w-7 h-7 rounded-lg flex items-center justify-center
+                             bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500
+                             border border-slate-200 hover:border-red-200 transition-all">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- Accepted pill -->
+                  <div x-show="ann.status === 'accepted'"
+                    class="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full
+                           bg-emerald-100 text-emerald-700 text-xs font-semibold ring-1 ring-emerald-200">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Accepted
+                  </div>
+                </div>
+
+                <!-- Row 2: medication badges -->
+                <div class="flex flex-wrap gap-1.5">
+                  <span x-show="ann.dose"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                           bg-teal-100 text-teal-800 ring-1 ring-teal-200"
+                    x-text="ann.dose">
+                  </span>
+                  <span x-show="ann.frequency"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                           bg-sky-100 text-sky-700 ring-1 ring-sky-200"
+                    x-text="ann.frequency">
+                  </span>
+                  <span x-show="ann.route"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                           bg-slate-100 text-slate-600 ring-1 ring-slate-200"
+                    x-text="ann.route">
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </template>
+
+        </div><!-- /medications section -->
+
       </div><!-- /results -->
 
     </section><!-- /right panel -->
@@ -471,9 +569,14 @@
         return buildSegments(this.notes, this.annotations);
       },
 
+      get medicationAnnotations() {
+        return this.annotations.filter(a => a.type === 'MEDICATION');
+      },
+
       get groupedAnnotations() {
         const groups = {};
         for (const ann of this.annotations) {
+          if (ann.type === 'MEDICATION') continue;
           const s = ann.subject || 'OTHER';
           if (!groups[s]) groups[s] = [];
           groups[s].push(ann);

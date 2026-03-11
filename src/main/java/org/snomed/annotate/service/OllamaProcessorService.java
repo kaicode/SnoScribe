@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.annotate.exception.ServiceException;
 import org.snomed.annotate.model.Annotation;
+import org.snomed.annotate.model.AnnotationType;
 import org.snomed.annotate.model.Context;
 import org.snomed.annotate.model.Laterality;
 import org.snomed.annotate.model.Subject;
@@ -48,7 +49,7 @@ public class OllamaProcessorService {
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		ConversationMessage[] conversation = new ConversationMessage[2];
-		conversation[0] = new ConversationMessage("user", systemPrompt);
+		conversation[0] = new ConversationMessage("system", systemPrompt);
 		conversation[1] = new ConversationMessage("user", document);
 		System.out.println("--Request Body Start --");
 		System.out.println(systemPrompt);
@@ -108,8 +109,25 @@ public class OllamaProcessorService {
 			if (entity.containsKey("t")) {
 				Annotation annotation = new Annotation();
 				annotation.setText(entity.get("t"));
+				if (entity.containsKey("type")) {
+					String type = entity.get("type");
+					if ("MEDICATION".equals(type)) {
+						annotation.setType(AnnotationType.MEDICATION);
+					} else {
+						annotation.setType(AnnotationType.CONDITION);
+					}
+				}
 				if (entity.containsKey("n")) {
 					annotation.setNormalisedText(entity.get("n"));
+				}
+				if (entity.containsKey("dose")) {
+					annotation.setDose(entity.get("dose"));
+				}
+				if (entity.containsKey("freq")) {
+					annotation.setFrequency(entity.get("freq"));
+				}
+				if (entity.containsKey("route")) {
+					annotation.setRoute(entity.get("route"));
 				}
 				if (entity.containsKey("neg")) {
 					annotation.setNegated("1".equals(entity.get("neg")));
