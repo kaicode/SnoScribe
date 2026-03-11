@@ -62,7 +62,7 @@ public class SnomedTerminologyService {
 
 			List<FhirConcept> concepts = callFhirExpand(ecl, filter);
 			concepts.stream()
-					.filter(c -> filter.equalsIgnoreCase(c.display))
+					.filter(c -> c.matchesFilter(filter))
 					.findFirst()
 					.ifPresent(c -> {
 						annotation.setConceptCode(c.code);
@@ -120,6 +120,7 @@ public class SnomedTerminologyService {
 		// be left as-is for the FHIR server to parse correctly.
 		String url = fhirTxUrl + "/ValueSet/$expand"
 				+ "?_format=json"
+				+ "&includeDesignations=true"
 				+ "&url=" + encode("http://snomed.info/sct?fhir_vs=ecl/" + ecl)
 				+ "&filter=" + encode(filter);
 
@@ -157,5 +158,26 @@ public class SnomedTerminologyService {
 	static class FhirConcept {
 		public String code;
 		public String display;
+		public List<FhirDesignation> designation;
+
+		/** Returns true if filter matches the display term or any synonym (case-insensitive). */
+		boolean matchesFilter(String filter) {
+			if (filter.equalsIgnoreCase(display)) {
+				return true;
+			}
+			if (designation != null) {
+				for (FhirDesignation d : designation) {
+					if (filter.equalsIgnoreCase(d.value)) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+	}
+
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	static class FhirDesignation {
+		public String value;
 	}
 }
