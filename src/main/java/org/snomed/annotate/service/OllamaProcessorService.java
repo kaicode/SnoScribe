@@ -9,6 +9,7 @@ import org.snomed.annotate.model.Annotation;
 import org.snomed.annotate.model.Context;
 import org.snomed.annotate.model.Laterality;
 import org.snomed.annotate.model.Subject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -32,10 +33,13 @@ public class OllamaProcessorService {
 	private final RestTemplate restTemplate;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final String systemPrompt;
+	private final String model;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public OllamaProcessorService(RestTemplateBuilder builder) throws IOException {
+	public OllamaProcessorService(RestTemplateBuilder builder,
+			@Value("${ollama.model}") String model) throws IOException {
 		this.restTemplate = builder.build();
+		this.model = model;
 		systemPrompt = StreamUtils.copyToString(getClass().getClassLoader().getResourceAsStream("annotate-prompt.txt"), StandardCharsets.UTF_8);
 	}
 
@@ -51,8 +55,6 @@ public class OllamaProcessorService {
 		System.out.println(document);
 		System.out.println("--Request Body End --");
 
-		String model = "gemma3:12b";
-//		String model = "qwen2.5:3b-instruct";
 		RequestBody requestBody = new RequestBody(model, false, conversation);
 
 		HttpEntity<RequestBody> entity = new HttpEntity<>(requestBody, headers);
