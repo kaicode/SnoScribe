@@ -71,8 +71,8 @@
         </div>
       </div>
 
-      <!-- Textarea card -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3 flex-1">
+      <!-- Textarea card (when no results) -->
+      <div x-show="!hasResults" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3 flex-1">
         <div class="flex items-center justify-between">
           <label class="text-sm font-semibold text-slate-700">Clinical Notes</label>
           <span class="text-xs text-slate-400 tabular-nums" x-text="notes.length + ' chars'"></span>
@@ -86,6 +86,33 @@
                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                  placeholder:text-slate-300 transition-all"
         ></textarea>
+      </div>
+
+      <!-- Highlighted notes view (when has results) -->
+      <div x-show="hasResults" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3 flex-1">
+        <div class="flex items-center justify-between">
+          <label class="text-sm font-semibold text-slate-700">Clinical Notes</label>
+          <button
+            @click="editAndReannotate()"
+            class="text-xs font-medium text-blue-600 hover:text-blue-700 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+          >
+            Edit & re-annotate
+          </button>
+        </div>
+        <div
+          class="w-full min-h-[22rem] rounded-xl border border-slate-200 bg-slate-50 p-3.5
+                 text-sm text-slate-700 leading-relaxed font-mono whitespace-pre-wrap overflow-auto"
+        >
+          <template x-for="(seg, i) in segments" :key="i">
+            <span
+              x-text="seg.content"
+              :class="seg.type === 'annotation' ? (hoveredAnnotationId === seg.id ? 'bg-amber-200 ring-1 ring-amber-400 rounded' : 'bg-amber-100 rounded') : ''"
+              @mouseenter="seg.type === 'annotation' && (hoveredAnnotationId = seg.id)"
+              @mouseleave="seg.type === 'annotation' && (hoveredAnnotationId = null)"
+              :data-annotation-id="seg.type === 'annotation' ? seg.id : null"
+            ></span>
+          </template>
+        </div>
       </div>
 
       <!-- Action buttons -->
@@ -258,11 +285,15 @@
                 x-transition:leave="transition ease-in duration-200"
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-95"
+                @mouseenter="hoveredAnnotationId = ann._id"
+                @mouseleave="hoveredAnnotationId = null"
                 class="bg-white rounded-2xl border shadow-sm overflow-hidden flex transition-all duration-200"
                 :class="{
                   'border-slate-200':                       ann.status === 'pending',
-                  'border-emerald-300 bg-emerald-50/20':   ann.status === 'accepted'
+                  'border-emerald-300 bg-emerald-50/20':   ann.status === 'accepted',
+                  'ring-2 ring-blue-400':                   hoveredAnnotationId === ann._id
                 }"
+                :data-annotation-id="ann._id"
               >
                 <!-- Left accent bar -->
                 <div class="w-1.5 shrink-0 self-stretch"
@@ -387,18 +418,58 @@
   const SUBJECT_ORDER   = ['PATIENT', 'FAMILY', 'OTHER'];
   const CONTEXT_ORDER   = ['CURRENT', 'SUSPECTED', 'HISTORICAL'];
 
+  function buildSegments(notes, annotations) {
+    if (!notes) return [];
+    if (!annotations || annotations.length === 0) return [{ type: 'text', content: notes }];
+    const ranges = [];
+    let searchStart = 0;
+    for (const ann of annotations) {
+      const idx = notes.indexOf(ann.text, searchStart);
+      if (idx === -1) continue;
+      ranges.push({ start: idx, end: idx + ann.text.length, id: ann._id });
+      searchStart = idx + ann.text.length;
+    }
+    ranges.sort((a, b) => a.start - b.start);
+    const kept = [];
+    let lastEnd = 0;
+    for (const r of ranges) {
+      if (r.start >= lastEnd) {
+        kept.push(r);
+        lastEnd = r.end;
+      }
+    }
+    const segments = [];
+    let pos = 0;
+    for (const r of kept) {
+      if (r.start > pos) {
+        segments.push({ type: 'text', content: notes.substring(pos, r.start) });
+      }
+      segments.push({ type: 'annotation', content: notes.substring(r.start, r.end), id: r.id });
+      pos = r.end;
+    }
+    if (pos < notes.length) {
+      segments.push({ type: 'text', content: notes.substring(pos) });
+    }
+    return segments.length ? segments : [{ type: 'text', content: notes }];
+  }
+
   function annotatorApp() {
     return {
-      notes:       SAMPLE_NOTES,
-      loading:     false,
-      error:       null,
-      annotations: [],
+      notes:               SAMPLE_NOTES,
+      loading:             false,
+      error:               null,
+      annotations:         [],
+      hoveredAnnotationId: null,
 
       // ── Computed getters ──────────────────────────────────────
       get hasResults()    { return this.annotations.length > 0; },
       get totalCount()    { return this.annotations.length; },
       get acceptedCount() { return this.annotations.filter(a => a.status === 'accepted').length; },
       get dismissedCount(){ return this.annotations.filter(a => a.status === 'dismissed').length; },
+
+      get segments() {
+        return buildSegments(this.notes, this.annotations);
+      },
 
       get groupedAnnotations() {
         const groups = {};
@@ -455,6 +526,12 @@
       loadSample() {
         this.notes = SAMPLE_NOTES;
         this.error = null;
+      },
+
+      editAndReannotate() {
+        this.annotations = [];
+        this.error = null;
+        this.hoveredAnnotationId = null;
       },
 
       accept(ann)  { ann.status = 'accepted'; },
