@@ -390,6 +390,15 @@
 
                   </div>
 
+                  <!-- SNOMED CT concept -->
+                  <div x-show="ann.conceptCode" class="flex items-center gap-1.5 pt-0.5">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium
+                                 bg-violet-100 text-violet-800 ring-1 ring-violet-200"
+                      x-text="ann.conceptCode">
+                    </span>
+                    <span class="text-xs text-slate-500 truncate" x-text="ann.conceptDisplay"></span>
+                  </div>
+
                 </div>
               </div>
             </template>
@@ -487,6 +496,15 @@
                            bg-slate-100 text-slate-600 ring-1 ring-slate-200"
                     x-text="ann.route">
                   </span>
+                </div>
+
+                <!-- SNOMED CT concept -->
+                <div x-show="ann.conceptCode" class="flex items-center gap-1.5 pt-0.5">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium
+                               bg-violet-100 text-violet-800 ring-1 ring-violet-200"
+                    x-text="ann.conceptCode">
+                  </span>
+                  <span class="text-xs text-slate-500 truncate" x-text="ann.conceptDisplay"></span>
                 </div>
 
               </div>

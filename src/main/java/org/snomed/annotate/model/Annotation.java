@@ -12,6 +12,9 @@ public class Annotation {
 	private String dose;
 	private String frequency;
 	private String route;
+	private String doseForm;
+	private String conceptCode;
+	private String conceptDisplay;
 
 	public AnnotationType getType() {
 		return type;
@@ -91,5 +94,29 @@ public class Annotation {
 
 	public void setRoute(String route) {
 		this.route = route;
+	}
+
+	public String getDoseForm() {
+		return doseForm;
+	}
+
+	public void setDoseForm(String doseForm) {
+		this.doseForm = doseForm;
+	}
+
+	public String getConceptCode() {
+		return conceptCode;
+	}
+
+	public void setConceptCode(String conceptCode) {
+		this.conceptCode = conceptCode;
+	}
+
+	public String getConceptDisplay() {
+		return conceptDisplay;
+	}
+
+	public void setConceptDisplay(String conceptDisplay) {
+		this.conceptDisplay = conceptDisplay;
 	}
 }

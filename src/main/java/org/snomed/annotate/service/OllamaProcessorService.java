@@ -129,6 +129,9 @@ public class OllamaProcessorService {
 				if (entity.containsKey("route")) {
 					annotation.setRoute(entity.get("route"));
 				}
+				if (entity.containsKey("doseForm")) {
+					annotation.setDoseForm(entity.get("doseForm"));
+				}
 				if (entity.containsKey("neg")) {
 					annotation.setNegated("1".equals(entity.get("neg")));
 				}

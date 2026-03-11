@@ -26,12 +26,13 @@ MEDICATION fields:
 - "n"    : normalized drug name (e.g. "ramipril")
 - "dose" : dose amount and unit (e.g. "5mg"), omit if not stated
 - "freq" : dosing frequency in plain English (e.g. "once daily", "as needed"), omit if not stated
-- "route": route of administration (e.g. "oral"), omit if not inferrable
+- "route"   : route of administration (e.g. "oral"), omit if not inferrable
+- "doseForm": dose form in plain English (e.g. "tablet", "capsule", "solution"), omit if not stated or not inferrable
 
 Output JSON array only:
 [
   {"type":"CONDITION","t":"<span>","n":"<norm>","neg":0,"s":"PATIENT","c":"CURRENT"},
-  {"type":"MEDICATION","t":"<span>","n":"<drug>","dose":"<dose>","freq":"<freq>","route":"oral"}
+  {"type":"MEDICATION","t":"<span>","n":"<drug>","dose":"<dose>","freq":"<freq>","route":"oral","doseForm":"tablet"}
 ]
 
 Clinical notes will follow.
