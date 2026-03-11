@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinical Notes Annotator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen font-sans antialiased">
+
+<div x-data="annotatorApp()" class="flex flex-col min-h-screen">
+
+  <!-- ── HEADER ── -->
+  <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+    <div class="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-3">
+      <!-- Logo -->
+      <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm shrink-0">
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-slate-800 leading-tight">Clinical Notes Annotator</h1>
+        <p class="text-xs text-slate-400 leading-tight">AI-powered clinical concept extraction</p>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 ring-1 ring-violet-200">
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+          SNOMED CT
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── MAIN TWO-PANEL LAYOUT ── -->
+  <main class="flex flex-1 gap-5 p-5 max-w-[1600px] mx-auto w-full">
+
+    <!-- ════════════════════════════════════════
+         LEFT PANEL – Notes Input
+    ════════════════════════════════════════ -->
+    <section class="w-[42%] shrink-0 flex flex-col gap-4">
+
+      <!-- Info card -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+              <path d="M9 12h6M9 16h4"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-slate-700">Paste clinical notes below</p>
+            <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">The AI model will extract SNOMED CT concepts, including subject, clinical context, negation, and laterality.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Textarea card -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3 flex-1">
+        <div class="flex items-center justify-between">
+          <label class="text-sm font-semibold text-slate-700">Clinical Notes</label>
+          <span class="text-xs text-slate-400 tabular-nums" x-text="notes.length + ' chars'"></span>
+        </div>
+        <textarea
+          x-model="notes"
+          rows="22"
+          placeholder="Paste or type clinical notes here…"
+          class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3.5
+                 text-sm text-slate-700 leading-relaxed font-mono
+                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                 placeholder:text-slate-300 transition-all"
+        ></textarea>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex gap-3">
+        <!-- Primary: Annotate -->
+        <button
+          @click="annotate()"
+          :disabled="loading || !notes.trim()"
+          class="flex-1 flex items-center justify-center gap-2 px-5 py-3
+                 bg-blue-600 hover:bg-blue-700 active:bg-blue-800
+                 disabled:opacity-40 disabled:cursor-not-allowed
+                 text-white text-sm font-semibold rounded-xl shadow-sm
+                 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <!-- Spinner -->
+          <svg x-show="loading" class="animate-spin h-4 w-4 text-white shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <!-- Tag icon -->
+          <svg x-show="!loading" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+          <span x-text="loading ? 'Annotating…' : 'Annotate Notes'"></span>
+        </button>
+
+        <!-- Secondary: Load Sample -->
+        <button
+          @click="loadSample()"
+          :disabled="loading"
+          class="px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-600
+                 hover:bg-slate-50 hover:border-slate-400 text-sm font-medium
+                 disabled:opacity-40 disabled:cursor-not-allowed
+                 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+        >
+          Load Sample
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ════════════════════════════════════════
+         RIGHT PANEL – Results
+    ════════════════════════════════════════ -->
+    <section class="flex-1 min-w-0 flex flex-col gap-4">
+
+      <!-- ── Empty state ── -->
+      <div
+        x-show="!hasResults && !loading && !error"
+        class="flex-1 flex flex-col items-center justify-center text-center gap-5 py-24"
+      >
+        <div class="w-24 h-24 rounded-full bg-slate-200 flex items-center justify-center">
+          <svg class="w-12 h-12 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+            <rect x="9" y="3" width="6" height="4" rx="1"/>
+            <path d="M9 12h6M9 16h4"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-slate-500 font-semibold text-lg">No annotations yet</p>
+          <p class="text-sm text-slate-400 mt-1 max-w-xs mx-auto">Enter or load clinical notes on the left, then click <span class="font-medium text-slate-500">Annotate Notes</span> to extract SNOMED CT concepts.</p>
+        </div>
+      </div>
+
+      <!-- ── Skeleton loader ── -->
+      <div x-show="loading" class="flex flex-col gap-4">
+        <!-- Stats skeleton -->
+        <div class="grid grid-cols-3 gap-3">
+          <template x-for="i in [1,2,3]" :key="i">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
+              <div class="h-7 w-10 bg-slate-200 rounded mx-auto mb-2"></div>
+              <div class="h-3 w-16 bg-slate-100 rounded mx-auto"></div>
+            </div>
+          </template>
+        </div>
+        <!-- Section label skeleton -->
+        <div class="h-3 w-20 bg-slate-200 rounded animate-pulse mt-1"></div>
+        <!-- Card skeletons -->
+        <template x-for="i in [1,2,3,4]" :key="i">
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse flex gap-4">
+            <div class="w-1 rounded-full bg-slate-200 self-stretch shrink-0"></div>
+            <div class="flex-1 flex flex-col gap-2.5">
+              <div class="flex justify-between items-start gap-2">
+                <div class="h-4 rounded bg-slate-200" :style="`width: ${55 + i * 7}%`"></div>
+                <div class="flex gap-1.5 shrink-0">
+                  <div class="h-7 w-7 rounded-lg bg-slate-100"></div>
+                  <div class="h-7 w-7 rounded-lg bg-slate-100"></div>
+                </div>
+              </div>
+              <div class="h-3 w-32 bg-slate-100 rounded"></div>
+              <div class="flex gap-1.5">
+                <div class="h-5 w-20 rounded-full bg-slate-100"></div>
+                <div class="h-5 w-14 rounded-full bg-slate-100"></div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- ── Error state ── -->
+      <div
+        x-show="error && !loading"
+        class="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-4"
+      >
+        <div class="shrink-0 w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-red-800">Annotation failed</p>
+          <p class="text-sm text-red-600 mt-0.5 break-words" x-text="error"></p>
+          <button @click="error = null" class="mt-2 text-xs text-red-500 underline hover:text-red-700 transition-colors">
+            Dismiss
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Results ── -->
+      <div x-show="hasResults && !loading" class="flex flex-col gap-4">
+
+        <!-- Summary stats -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 text-center">
+            <div class="text-2xl font-bold text-slate-800 tabular-nums" x-text="totalCount"></div>
+            <div class="text-xs text-slate-400 mt-0.5 font-medium">Extracted</div>
+          </div>
+          <div class="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 text-center">
+            <div class="text-2xl font-bold text-emerald-700 tabular-nums" x-text="acceptedCount"></div>
+            <div class="text-xs text-emerald-600 mt-0.5 font-medium">Accepted</div>
+          </div>
+          <div class="bg-slate-100 rounded-2xl border border-slate-200 shadow-sm p-4 text-center">
+            <div class="text-2xl font-bold text-slate-400 tabular-nums" x-text="dismissedCount"></div>
+            <div class="text-xs text-slate-400 mt-0.5 font-medium">Dismissed</div>
+          </div>
+        </div>
+
+        <!-- Grouped annotation sections -->
+        <template x-for="group in groupedAnnotations" :key="group.subject">
+          <div class="flex flex-col gap-2">
+
+            <!-- Section header -->
+            <div class="flex items-center gap-2 px-1">
+              <div class="w-2.5 h-2.5 rounded-full shrink-0"
+                :class="{
+                  'bg-blue-500':   group.subject === 'PATIENT',
+                  'bg-purple-500': group.subject === 'FAMILY',
+                  'bg-slate-400':  group.subject === 'OTHER'
+                }">
+              </div>
+              <h3 class="text-xs font-bold uppercase tracking-widest"
+                :class="{
+                  'text-blue-600':   group.subject === 'PATIENT',
+                  'text-purple-600': group.subject === 'FAMILY',
+                  'text-slate-400':  group.subject === 'OTHER'
+                }"
+                x-text="group.label">
+              </h3>
+              <span class="ml-auto text-xs text-slate-400 tabular-nums"
+                x-text="group.items.filter(a => a.status !== 'dismissed').length + ' shown'">
+              </span>
+            </div>
+
+            <!-- Annotation cards -->
+            <template x-for="ann in group.items" :key="ann._id">
+              <div
+                x-show="ann.status !== 'dismissed'"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="bg-white rounded-2xl border shadow-sm overflow-hidden flex transition-all duration-200"
+                :class="{
+                  'border-slate-200':                       ann.status === 'pending',
+                  'border-emerald-300 bg-emerald-50/20':   ann.status === 'accepted'
+                }"
+              >
+                <!-- Left accent bar -->
+                <div class="w-1.5 shrink-0 self-stretch"
+                  :class="{
+                    'bg-blue-400':   (ann.subject || 'OTHER') === 'PATIENT',
+                    'bg-purple-400': (ann.subject || 'OTHER') === 'FAMILY',
+                    'bg-slate-300':  (ann.subject || 'OTHER') === 'OTHER'
+                  }">
+                </div>
+
+                <!-- Card body -->
+                <div class="flex-1 min-w-0 p-4 flex flex-col gap-2">
+
+                  <!-- Row 1: text + buttons -->
+                  <div class="flex items-start gap-2">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-slate-800 leading-snug" x-text="ann.text"></p>
+                      <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="ann.normalisedText"></p>
+                    </div>
+
+                    <!-- Pending: accept + dismiss buttons -->
+                    <div class="flex gap-1.5 shrink-0" x-show="ann.status === 'pending'">
+                      <button
+                        @click="accept(ann)"
+                        title="Accept"
+                        class="w-7 h-7 rounded-lg flex items-center justify-center
+                               bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700
+                               border border-emerald-200 hover:border-emerald-300 transition-all"
+                      >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </button>
+                      <button
+                        @click="dismiss(ann)"
+                        title="Dismiss"
+                        class="w-7 h-7 rounded-lg flex items-center justify-center
+                               bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500
+                               border border-slate-200 hover:border-red-200 transition-all"
+                      >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+
+                    <!-- Accepted pill -->
+                    <div x-show="ann.status === 'accepted'"
+                      class="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full
+                             bg-emerald-100 text-emerald-700 text-xs font-semibold ring-1 ring-emerald-200">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Accepted
+                    </div>
+                  </div>
+
+                  <!-- Row 2: badges -->
+                  <div class="flex flex-wrap gap-1.5">
+
+                    <!-- Context badge -->
+                    <span
+                      x-show="ann.context"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1"
+                      :class="{
+                        'bg-emerald-100 text-emerald-800 ring-emerald-200': ann.context === 'CURRENT',
+                        'bg-slate-100 text-slate-600 ring-slate-200':       ann.context === 'HISTORICAL',
+                        'bg-amber-100 text-amber-800 ring-amber-200':       ann.context === 'SUSPECTED'
+                      }"
+                      x-text="ann.context ? ann.context.charAt(0) + ann.context.slice(1).toLowerCase() : ''"
+                    ></span>
+
+                    <!-- Laterality badge -->
+                    <span
+                      x-show="ann.laterality"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                             bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                      x-text="ann.laterality === 'LEFT_AND_RIGHT' ? 'Bilateral'
+                             : ann.laterality === 'LEFT' ? 'Left'
+                             : ann.laterality === 'RIGHT' ? 'Right' : ''"
+                    ></span>
+
+                    <!-- Negated badge -->
+                    <span
+                      x-show="ann.negated"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                             bg-red-100 text-red-700 ring-1 ring-red-200"
+                    >
+                      <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                      </svg>
+                      Negated
+                    </span>
+
+                  </div>
+
+                </div>
+              </div>
+            </template>
+
+          </div>
+        </template>
+
+      </div><!-- /results -->
+
+    </section><!-- /right panel -->
+
+  </main>
+
+</div><!-- /root -->
+
+<script>
+  const SAMPLE_NOTES = `* Patient presents for a new patient health check.  States generally feels well.
+* **PMHx:**  Osteoarthritis (right knee), diagnosed 2015.  Mild hypertension, diagnosed 2018. Denies any previous surgeries, hospital admissions, or significant illnesses.
+* **FHx:** Father – MI at 72. Mother – Osteoporosis. Denies any significant family history of cancer or other major illnesses.
+* **SHx:**  Non-smoker.  Social drinks 1-2 glasses of wine per week.  Retired school teacher.  Lives with husband.  Active in local gardening club.
+* **Medications:**
+\t* Ramipril 5mg OD
+\t* Paracetamol 500mg PRN for pain
+* **Allergies:** NKDA (No Known Drug Allergies)`;
+
+  const SUBJECT_ORDER   = ['PATIENT', 'FAMILY', 'OTHER'];
+  const CONTEXT_ORDER   = ['CURRENT', 'SUSPECTED', 'HISTORICAL'];
+
+  function annotatorApp() {
+    return {
+      notes:       SAMPLE_NOTES,
+      loading:     false,
+      error:       null,
+      annotations: [],
+
+      // ── Computed getters ──────────────────────────────────────
+      get hasResults()    { return this.annotations.length > 0; },
+      get totalCount()    { return this.annotations.length; },
+      get acceptedCount() { return this.annotations.filter(a => a.status === 'accepted').length; },
+      get dismissedCount(){ return this.annotations.filter(a => a.status === 'dismissed').length; },
+
+      get groupedAnnotations() {
+        const groups = {};
+        for (const ann of this.annotations) {
+          const s = ann.subject || 'OTHER';
+          if (!groups[s]) groups[s] = [];
+          groups[s].push(ann);
+        }
+
+        const ctxIdx = c => { const i = CONTEXT_ORDER.indexOf(c); return i === -1 ? 99 : i; };
+
+        return SUBJECT_ORDER
+          .filter(s => groups[s] && groups[s].length > 0)
+          .map(s => ({
+            subject: s,
+            label:   s.charAt(0) + s.slice(1).toLowerCase(),
+            items:   groups[s].slice().sort((a, b) => ctxIdx(a.context) - ctxIdx(b.context))
+          }));
+      },
+
+      // ── Methods ───────────────────────────────────────────────
+      async annotate() {
+        if (!this.notes.trim()) return;
+        this.loading     = true;
+        this.error       = null;
+        this.annotations = [];
+
+        try {
+          const response = await fetch('/api/annotate', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ document: this.notes })
+          });
+
+          if (!response.ok) {
+            let msg = `Server error (${response.status})`;
+            try {
+              const err = await response.json();
+              if (err.message) msg = err.message;
+            } catch (_) {}
+            throw new Error(msg);
+          }
+
+          const data = await response.json();
+          this.annotations = data.map((ann, i) => ({ ...ann, _id: i, status: 'pending' }));
+
+        } catch (e) {
+          this.error = e.message || 'An unexpected error occurred. Please try again.';
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      loadSample() {
+        this.notes = SAMPLE_NOTES;
+        this.error = null;
+      },
+
+      accept(ann)  { ann.status = 'accepted'; },
+      dismiss(ann) { ann.status = 'dismissed'; },
+    };
+  }
+</script>
+</body>
+</html>
