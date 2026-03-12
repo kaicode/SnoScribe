@@ -551,12 +551,10 @@
     if (!notes) return [];
     if (!annotations || annotations.length === 0) return [{ type: 'text', content: notes }];
     const ranges = [];
-    let searchStart = 0;
     for (const ann of annotations) {
-      const idx = notes.indexOf(ann.text, searchStart);
+      const idx = notes.indexOf(ann.text);
       if (idx === -1) continue;
       ranges.push({ start: idx, end: idx + ann.text.length, id: ann._id, color: annColor(ann) });
-      searchStart = idx + ann.text.length;
     }
     ranges.sort((a, b) => a.start - b.start);
     const kept = [];
