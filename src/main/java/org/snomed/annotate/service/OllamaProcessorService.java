@@ -45,18 +45,22 @@ public class OllamaProcessorService {
 	}
 
 	public List<Annotation> processDocument(String document) throws ServiceException {
+		return processDocument(document, this.model);
+	}
+
+	public List<Annotation> processDocument(String document, String modelName) throws ServiceException {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		ConversationMessage[] conversation = new ConversationMessage[2];
 		conversation[0] = new ConversationMessage("system", systemPrompt);
 		conversation[1] = new ConversationMessage("user", document);
-		System.out.println("--Request Body Start --");
-		System.out.println(systemPrompt);
-		System.out.println(document);
-		System.out.println("--Request Body End --");
+		logger.debug("--Request Body Start --");
+		logger.debug(systemPrompt);
+		logger.debug(document);
+		logger.debug("--Request Body End --");
 
-		RequestBody requestBody = new RequestBody(model, false, conversation);
+		RequestBody requestBody = new RequestBody(modelName, false, conversation);
 
 		HttpEntity<RequestBody> entity = new HttpEntity<>(requestBody, headers);
 

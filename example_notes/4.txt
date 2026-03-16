@@ -1,5 +1,5 @@
 female, 72 years old
 
-Patient presents for routine medication review. Reports persistent lower back pain, aggravated by prolonged standing. States pain has been gradually worsening over the past 6 months. Denies any 
-neurological symptoms (numbness, tingling, weakness).  Medications: Amoxicillin 250mg three times daily for suspected UTI started yesterday by pharmacist, Lorazepam 1mg at night PRN for anxiety, Paracetamol 
-500mg PRN for pain. Reports feeling slightly dizzy when standing quickly. No recent changes to diet or lifestyle. Lives alone and feels increasingly isolated.
+Patient presents for routine medication review. Reports persistent lower back pain, aggravated by prolonged standing. States pain has been gradually worsening over the past 6 months. Denies any
+neurological symptoms (numbness, tingling, weakness).  Medications: Amoxicillin 250mg three times daily for suspected UTI started yesterday by pharmacist, Lorazepam 1mg at night PRN for anxiety,
+Paracetamol 500mg PRN for pain. Reports feeling slightly dizzy when standing quickly. No recent changes to diet or lifestyle. Lives alone and feels increasingly isolated.
