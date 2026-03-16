@@ -139,46 +139,58 @@ public class OllamaProcessorService {
 				if (entity.containsKey("neg")) {
 					annotation.setNegated("1".equals(entity.get("neg")));
 				}
-				if (entity.containsKey("s")) {
-					String subject = entity.get("s");
-					if ("PATIENT".equals(subject)) {
-						annotation.setSubject(Subject.PATIENT);
-					} else if ("FAMILY".equals(subject)) {
-						annotation.setSubject(Subject.FAMILY);
-					} else if ("OTHER".equals(subject)) {
-						annotation.setSubject(Subject.OTHER);
-					} else {
-						logger.warn("Unrecognized subject: {}", subject);
-					}
-				}
-				if (entity.containsKey("l")) {
-					String laterality = entity.get("l");
-					if ("LEFT".equals(laterality)) {
-						annotation.setLaterality(Laterality.LEFT);
-					} else if ("RIGHT".equals(laterality)) {
-						annotation.setLaterality(Laterality.RIGHT);
-					} else if ("LEFT_AND_RIGHT".equals(laterality)) {
-						annotation.setLaterality(Laterality.LEFT_AND_RIGHT);
-					} else {
-						logger.warn("Unrecognized laterality: {}", laterality);
-					}
-				}
-				if (entity.containsKey("c")) {
-					String context = entity.get("c");
-					if ("CURRENT".equals(context)) {
-						annotation.setContext(Context.CURRENT);
-					} else if ("HISTORICAL".equals(context)) {
-						annotation.setContext(Context.HISTORICAL);
-					} else if ("SUSPECTED".equals(context)) {
-						annotation.setContext(Context.SUSPECTED);
-					} else {
-						logger.warn("Unrecognized context: {}", context);
-					}
-				}
+				extractSubject(entity, annotation);
+				extractLaterality(entity, annotation);
+				extractContext(entity, annotation);
 				annotations.add(annotation);
 			}
 		}
 		return annotations;
+	}
+
+	private void extractSubject(Map<String, String> entity, Annotation annotation) {
+		if (entity.containsKey("s")) {
+			String subject = entity.get("s");
+			if ("PATIENT".equals(subject)) {
+				annotation.setSubject(Subject.PATIENT);
+			} else if ("FAMILY".equals(subject)) {
+				annotation.setSubject(Subject.FAMILY);
+			} else if ("OTHER".equals(subject)) {
+				annotation.setSubject(Subject.OTHER);
+			} else {
+				logger.warn("Unrecognized subject: {}", subject);
+			}
+		}
+	}
+
+	private void extractLaterality(Map<String, String> entity, Annotation annotation) {
+		if (entity.containsKey("l")) {
+			String laterality = entity.get("l");
+			if ("LEFT".equals(laterality)) {
+				annotation.setLaterality(Laterality.LEFT);
+			} else if ("RIGHT".equals(laterality)) {
+				annotation.setLaterality(Laterality.RIGHT);
+			} else if ("LEFT_AND_RIGHT".equals(laterality)) {
+				annotation.setLaterality(Laterality.LEFT_AND_RIGHT);
+			} else {
+				logger.warn("Unrecognized laterality: {}", laterality);
+			}
+		}
+	}
+
+	private void extractContext(Map<String, String> entity, Annotation annotation) {
+		if (entity.containsKey("c")) {
+			String context = entity.get("c");
+			if ("CURRENT".equals(context)) {
+				annotation.setContext(Context.CURRENT);
+			} else if ("HISTORICAL".equals(context)) {
+				annotation.setContext(Context.HISTORICAL);
+			} else if ("SUSPECTED".equals(context)) {
+				annotation.setContext(Context.SUSPECTED);
+			} else {
+				logger.warn("Unrecognized context: {}", context);
+			}
+		}
 	}
 
 	// Inner classes for JSON structure
