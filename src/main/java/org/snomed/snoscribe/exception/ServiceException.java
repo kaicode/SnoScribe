@@ -1,4 +1,4 @@
-package org.snomed.annotate.exception;
+package org.snomed.snoscribe.exception;
 
 import org.springframework.http.HttpStatus;
 

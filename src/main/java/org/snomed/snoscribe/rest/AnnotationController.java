@@ -1,9 +1,9 @@
-package org.snomed.annotate.rest;
+package org.snomed.snoscribe.rest;
 
-import org.snomed.annotate.exception.ServiceException;
-import org.snomed.annotate.model.Annotation;
-import org.snomed.annotate.service.OllamaProcessorService;
-import org.snomed.annotate.service.SnomedTerminologyService;
+import org.snomed.snoscribe.exception.ServiceException;
+import org.snomed.snoscribe.model.Annotation;
+import org.snomed.snoscribe.service.OllamaProcessorService;
+import org.snomed.snoscribe.service.SnomedTerminologyService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;

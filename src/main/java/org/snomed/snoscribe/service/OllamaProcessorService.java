@@ -1,15 +1,15 @@
-package org.snomed.annotate.service;
+package org.snomed.snoscribe.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.annotate.exception.ServiceException;
-import org.snomed.annotate.model.Annotation;
-import org.snomed.annotate.model.AnnotationType;
-import org.snomed.annotate.model.Context;
-import org.snomed.annotate.model.Laterality;
-import org.snomed.annotate.model.Subject;
+import org.snomed.snoscribe.exception.ServiceException;
+import org.snomed.snoscribe.model.Annotation;
+import org.snomed.snoscribe.model.AnnotationType;
+import org.snomed.snoscribe.model.Context;
+import org.snomed.snoscribe.model.Laterality;
+import org.snomed.snoscribe.model.Subject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;

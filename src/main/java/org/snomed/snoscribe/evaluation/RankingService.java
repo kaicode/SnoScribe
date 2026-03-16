@@ -1,9 +1,9 @@
-package org.snomed.annotate.evaluation;
+package org.snomed.snoscribe.evaluation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.snomed.annotate.evaluation.model.*;
-import org.snomed.annotate.model.Annotation;
+import org.snomed.snoscribe.evaluation.model.*;
+import org.snomed.snoscribe.model.Annotation;
 
 import java.io.File;
 import java.math.BigDecimal;

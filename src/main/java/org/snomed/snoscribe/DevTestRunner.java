@@ -1,10 +1,10 @@
-package org.snomed.annotate;
+package org.snomed.snoscribe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
-import org.snomed.annotate.exception.ServiceException;
-import org.snomed.annotate.model.Annotation;
-import org.snomed.annotate.service.OllamaProcessorService;
+import org.snomed.snoscribe.exception.ServiceException;
+import org.snomed.snoscribe.model.Annotation;
+import org.snomed.snoscribe.service.OllamaProcessorService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 

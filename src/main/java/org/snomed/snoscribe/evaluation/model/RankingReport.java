@@ -1,4 +1,4 @@
-package org.snomed.annotate.evaluation.model;
+package org.snomed.snoscribe.evaluation.model;
 
 import java.util.List;
 

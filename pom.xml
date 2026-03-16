@@ -3,11 +3,11 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<name>Annotate</name>
+	<name>SnoScribe</name>
 	<description>POC for annotating clinical notes using SNOMED CT.</description>
 
-	<groupId>org.snomed.annotate</groupId>
-	<artifactId>snomed-annotate</artifactId>
+	<groupId>org.snomed</groupId>
+	<artifactId>snoscribe</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -16,7 +16,7 @@
 		<maven.compiler.source>${java.version}</maven.compiler.source>
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 
-		<packageName>snomed-annotate</packageName>
+		<packageName>snoscribe</packageName>
 		<spring.version>6.2.11</spring.version>
 		<spring-boot.version>3.5.7</spring-boot.version>
 		<langchain4j.version>1.4.0</langchain4j.version>

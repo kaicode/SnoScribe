@@ -1,10 +1,10 @@
-package org.snomed.annotate.service;
+package org.snomed.snoscribe.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.annotate.model.Annotation;
-import org.snomed.annotate.model.AnnotationType;
+import org.snomed.snoscribe.model.Annotation;
+import org.snomed.snoscribe.model.AnnotationType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package org.snomed.annotate.model;
+package org.snomed.snoscribe.model;
 
 public enum Laterality {
 

@@ -1,14 +1,14 @@
-package org.snomed.annotate.evaluation;
+package org.snomed.snoscribe.evaluation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.annotate.evaluation.model.BenchmarkResult;
-import org.snomed.annotate.evaluation.model.Timings;
-import org.snomed.annotate.model.Annotation;
-import org.snomed.annotate.service.OllamaProcessorService;
-import org.snomed.annotate.service.SnomedTerminologyService;
+import org.snomed.snoscribe.evaluation.model.BenchmarkResult;
+import org.snomed.snoscribe.evaluation.model.Timings;
+import org.snomed.snoscribe.model.Annotation;
+import org.snomed.snoscribe.service.OllamaProcessorService;
+import org.snomed.snoscribe.service.SnomedTerminologyService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;

@@ -1,6 +1,6 @@
-package org.snomed.annotate.evaluation.model;
+package org.snomed.snoscribe.evaluation.model;
 
-import org.snomed.annotate.model.Annotation;
+import org.snomed.snoscribe.model.Annotation;
 
 import java.util.List;
 
