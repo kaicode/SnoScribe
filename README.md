@@ -1,7 +1,7 @@
 # SnoScribe
 
-A proof-of-concept tool that reads free-text clinical notes and automatically identifies clinical conditions and medications, 
-linking each finding to a standard SNOMED CT concept code and including crucial context. 
+A demonstration tool that reads free-text clinical notes and automatically identifies clinical conditions and medications, 
+linking each finding to a standard SNOMED CT concept code and including context. 
 
 Everything runs locally - no patient data leaves the machine.
 
