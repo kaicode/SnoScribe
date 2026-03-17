@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.snomed.snoscribe.evaluation.model.BenchmarkResult;
 import org.snomed.snoscribe.evaluation.model.Timings;
 import org.snomed.snoscribe.model.Annotation;
-import org.snomed.snoscribe.service.OllamaProcessorService;
+import org.snomed.snoscribe.service.LlmProcessorService;
 import org.snomed.snoscribe.service.SnomedTerminologyService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -42,16 +42,16 @@ public class EvaluationRunner implements ApplicationRunner {
 	private static final Logger logger = LoggerFactory.getLogger(EvaluationRunner.class);
 
 	private final EvaluationConfig config;
-	private final OllamaProcessorService ollamaProcessorService;
+	private final LlmProcessorService llmProcessorService;
 	private final SnomedTerminologyService snomedTerminologyService;
 	private final ObjectMapper objectMapper;
 
 	public EvaluationRunner(EvaluationConfig config,
-			OllamaProcessorService ollamaProcessorService,
+			LlmProcessorService llmProcessorService,
 			SnomedTerminologyService snomedTerminologyService,
 			ObjectMapper objectMapper) {
 		this.config = config;
-		this.ollamaProcessorService = ollamaProcessorService;
+		this.llmProcessorService = llmProcessorService;
 		this.snomedTerminologyService = snomedTerminologyService;
 		this.objectMapper = objectMapper;
 	}
@@ -87,7 +87,7 @@ public class EvaluationRunner implements ApplicationRunner {
 
 				try {
 					// LLM call
-					List<Annotation> annotations = ollamaProcessorService.processDocument(document, model);
+					List<Annotation> annotations = llmProcessorService.processDocument(document, model);
 					long afterLlm = System.currentTimeMillis();
 
 					// Parallel FHIR enrichment

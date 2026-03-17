@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.snomed.snoscribe.exception.ServiceException;
 import org.snomed.snoscribe.model.Annotation;
-import org.snomed.snoscribe.service.OllamaProcessorService;
+import org.snomed.snoscribe.service.LlmProcessorService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -20,11 +20,11 @@ import java.util.List;
 @Profile("!evaluate")
 public class DevTestRunner {
 
-	private final OllamaProcessorService ollamaProcessorService;
+	private final LlmProcessorService llmProcessorService;
 	private final ObjectMapper objectMapper;
 
-	public DevTestRunner(OllamaProcessorService ollamaProcessorService, ObjectMapper objectMapper) {
-		this.ollamaProcessorService = ollamaProcessorService;
+	public DevTestRunner(LlmProcessorService llmProcessorService, ObjectMapper objectMapper) {
+		this.llmProcessorService = llmProcessorService;
 		this.objectMapper = objectMapper;
 	}
 
@@ -33,7 +33,7 @@ public class DevTestRunner {
 		System.out.println("App started");
 		System.out.println("Running test...");
 		Date start = new Date();
-		List<Annotation> response = ollamaProcessorService.processDocument("""
+		List<Annotation> response = llmProcessorService.processDocument("""
 				* Patient presents for a new patient health check.  States generally feels well.
 				* **PMHx:**  Osteoarthritis (right knee), diagnosed 2015.  Mild hypertension, diagnosed 2018. Denies any previous surgeries, hospital admissions, or significant illnesses.
 				* **FHx:** Father – MI at 72. Mother – Osteoporosis. Denies any significant family history of cancer or other major illnesses.

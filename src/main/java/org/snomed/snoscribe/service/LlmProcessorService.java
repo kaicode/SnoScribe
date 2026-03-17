@@ -2,20 +2,22 @@ package org.snomed.snoscribe.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.snoscribe.config.LlmConfig;
 import org.snomed.snoscribe.exception.ServiceException;
 import org.snomed.snoscribe.model.Annotation;
 import org.snomed.snoscribe.model.AnnotationType;
 import org.snomed.snoscribe.model.Context;
 import org.snomed.snoscribe.model.Laterality;
 import org.snomed.snoscribe.model.Subject;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,53 +28,45 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
-public class OllamaProcessorService {
+public class LlmProcessorService {
 
 	private static final Pattern JSON_CODE_BLOCK = Pattern.compile("^\\s*```(?:json)?\\s*\\n?(.*)\\n?```\\s*$", Pattern.DOTALL);
 
-	private final String apiUrl = "http://localhost:11434/api/chat";
-	private final RestTemplate restTemplate;
+	private final ChatModel defaultModel;
+	private final LlmConfig llmConfig;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 	private final String systemPrompt;
-	private final String model;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public OllamaProcessorService(RestTemplateBuilder builder,
-			@Value("${ollama.model}") String model) throws IOException {
-		this.restTemplate = builder.build();
-		this.model = model;
+	public LlmProcessorService(ChatModel defaultModel, LlmConfig llmConfig) throws IOException {
+		this.defaultModel = defaultModel;
+		this.llmConfig = llmConfig;
 		systemPrompt = StreamUtils.copyToString(getClass().getClassLoader().getResourceAsStream("annotate-prompt.txt"), StandardCharsets.UTF_8);
 	}
 
 	public List<Annotation> processDocument(String document) throws ServiceException {
-		return processDocument(document, this.model);
+		return processWithModel(defaultModel, document);
 	}
 
 	public List<Annotation> processDocument(String document, String modelName) throws ServiceException {
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
+		return processWithModel(llmConfig.buildModel(modelName), document);
+	}
 
-		ConversationMessage[] conversation = new ConversationMessage[2];
-		conversation[0] = new ConversationMessage("system", systemPrompt);
-		conversation[1] = new ConversationMessage("user", document);
+	private List<Annotation> processWithModel(ChatModel model, String document) throws ServiceException {
 		logger.debug("--Request Body Start --");
 		logger.debug(systemPrompt);
 		logger.debug(document);
 		logger.debug("--Request Body End --");
 
-		RequestBody requestBody = new RequestBody(modelName, false, conversation);
-
-		HttpEntity<RequestBody> entity = new HttpEntity<>(requestBody, headers);
+		List<ChatMessage> messages = List.of(
+				SystemMessage.from(systemPrompt),
+				UserMessage.from(document)
+		);
 
 		try {
-			ResponseEntity<OllamaChatResponse> responseEntity = restTemplate.postForEntity(apiUrl, entity, OllamaChatResponse.class);
-			OllamaChatResponse ollamaResponse = responseEntity.getBody();
-			if (ollamaResponse == null || ollamaResponse.message == null) {
-				throw new RuntimeException("Empty response from Ollama API");
-			}
-			String content = ollamaResponse.message.content;
+			String content = model.chat(messages).aiMessage().text();
 			if (content == null || content.isBlank()) {
-				throw new RuntimeException("No content in Ollama API response");
+				throw new RuntimeException("No content in LLM response");
 			}
 			String json = stripJsonCodeBlock(content);
 			List<Map<String, Object>> rawList = objectMapper.readValue(json, new TypeReference<>() {});
@@ -83,9 +77,6 @@ public class OllamaProcessorService {
 		}
 	}
 
-	/**
-	 * Strips optional markdown code block wrapper (e.g. ```json ... ```) from the model output.
-	 */
 	private String stripJsonCodeBlock(String content) {
 		content = content.trim();
 		var matcher = JSON_CODE_BLOCK.matcher(content);
@@ -191,40 +182,5 @@ public class OllamaProcessorService {
 				logger.warn("Unrecognized context: {}", context);
 			}
 		}
-	}
-
-	// Inner classes for JSON structure
-	static class ConversationMessage {
-		public String role;
-		public String content;
-
-		public ConversationMessage(String role, String content) {
-			this.role = role;
-			this.content = content;
-		}
-	}
-
-	static class RequestBody {
-		public String model;
-		public boolean stream;
-		public ConversationMessage[] messages;
-
-		public RequestBody(String model, boolean stream, ConversationMessage[] messages) {
-			this.model = model;
-			this.stream = stream;
-			this.messages = messages;
-		}
-	}
-
-	/** Ollama /api/chat response: message.content holds the assistant text (e.g. JSON array). */
-	static class OllamaChatResponse {
-		public String model;
-		public OllamaMessage message;
-		public Boolean done;
-	}
-
-	static class OllamaMessage {
-		public String role;
-		public String content;
 	}
 }

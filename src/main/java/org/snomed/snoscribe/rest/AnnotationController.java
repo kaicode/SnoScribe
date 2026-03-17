@@ -2,7 +2,7 @@ package org.snomed.snoscribe.rest;
 
 import org.snomed.snoscribe.exception.ServiceException;
 import org.snomed.snoscribe.model.Annotation;
-import org.snomed.snoscribe.service.OllamaProcessorService;
+import org.snomed.snoscribe.service.LlmProcessorService;
 import org.snomed.snoscribe.service.SnomedTerminologyService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,18 +17,18 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 public class AnnotationController {
 
-	private final OllamaProcessorService ollamaProcessorService;
+	private final LlmProcessorService llmProcessorService;
 	private final SnomedTerminologyService snomedTerminologyService;
 
-	public AnnotationController(OllamaProcessorService ollamaProcessorService,
+	public AnnotationController(LlmProcessorService llmProcessorService,
 			SnomedTerminologyService snomedTerminologyService) {
-		this.ollamaProcessorService = ollamaProcessorService;
+		this.llmProcessorService = llmProcessorService;
 		this.snomedTerminologyService = snomedTerminologyService;
 	}
 
 	@PostMapping("/annotate")
 	public List<Annotation> processDocument(@RequestBody DocumentRequest request) throws ServiceException {
-		List<Annotation> annotations = ollamaProcessorService.processDocument(request.getDocument());
+		List<Annotation> annotations = llmProcessorService.processDocument(request.getDocument());
 
 		// Enrich all annotations with SNOMED CT concepts in parallel
 		List<CompletableFuture<Void>> futures = annotations.stream()
