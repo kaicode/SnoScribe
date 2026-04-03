@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -26,15 +27,21 @@ public class SnomedTerminologyService {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final RestTemplate restTemplate;
+	private final InfinityRerankService infinityRerankService;
 	private final String fhirTxUrl;
+	private final boolean infinityRerankEnabled;
 
 	public SnomedTerminologyService(RestTemplateBuilder builder,
-			@Value("${fhir.tx.url}") String fhirTxUrl) {
+			InfinityRerankService infinityRerankService,
+			@Value("${fhir.tx.url}") String fhirTxUrl,
+			@Value("${infinity.rerank.enabled:true}") boolean infinityRerankEnabled) {
 		this.restTemplate = builder
 				.connectTimeout(Duration.ofSeconds(10))
 				.readTimeout(Duration.ofSeconds(10))
 				.build();
+		this.infinityRerankService = infinityRerankService;
 		this.fhirTxUrl = fhirTxUrl;
+		this.infinityRerankEnabled = infinityRerankEnabled;
 	}
 
 	/**
@@ -61,13 +68,19 @@ public class SnomedTerminologyService {
 			}
 
 			List<FhirConcept> concepts = callFhirExpand(ecl, filter);
-			concepts.stream()
-					.filter(c -> c.matchesFilter(filter))
+			boolean wholeMatched = concepts.stream()
+					.filter(c -> c.wholeTermFilter(filter))
 					.findFirst()
-					.ifPresent(c -> {
+					.map(c -> {
 						annotation.setConceptCode(c.code);
 						annotation.setConceptDisplay(c.display);
-					});
+						return true;
+					})
+					.orElse(false);
+
+			if (!wholeMatched && infinityRerankEnabled && !concepts.isEmpty()) {
+				infinityRerankService.tryRerankBestConcept(annotation, filter, concepts);
+			}
 
 		} catch (Exception e) {
 			logger.warn("SNOMED CT lookup failed for '{}': {}", annotation.getNormalisedText(), e.getMessage());
@@ -160,16 +173,22 @@ public class SnomedTerminologyService {
 		public String display;
 		public List<FhirDesignation> designation;
 
-		/** Returns true if filter matches the display term or any synonym (case-insensitive). */
-		boolean matchesFilter(String filter) {
-			if (filter.equalsIgnoreCase(display)) {
-				return true;
-			}
+		List<String> getTerms() {
+			List<String> terms = new ArrayList<>();
+			terms.add(display);
 			if (designation != null) {
-				for (FhirDesignation d : designation) {
-					if (filter.equalsIgnoreCase(d.value)) {
-						return true;
-					}
+				for (FhirDesignation fhirDesignation : designation) {
+					terms.add(fhirDesignation.value);
+				}
+			}
+			return terms;
+		}
+
+		/** Returns true if filter matches the display term or any synonym (case-insensitive). */
+		boolean wholeTermFilter(String filter) {
+			for (String term : getTerms()) {
+				if (filter.equalsIgnoreCase(term)) {
+					return true;
 				}
 			}
 			return false;

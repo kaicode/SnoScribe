@@ -625,7 +625,8 @@
 
       // ── Methods ───────────────────────────────────────────────
       async annotate() {
-        if (!this.notes.trim()) return;
+        const notes = this.notes; // capture before any state mutations
+        if (!notes.trim()) return;
         this.loading        = true;
         this.error          = null;
         this.annotations    = [];
@@ -636,7 +637,7 @@
           const response = await fetch('/api/annotate', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ document: this.notes })
+            body:    JSON.stringify({ document: notes })
           });
 
           if (!response.ok) {

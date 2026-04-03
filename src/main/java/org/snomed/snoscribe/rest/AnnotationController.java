@@ -33,7 +33,7 @@ public class AnnotationController {
 		// Enrich all annotations with SNOMED CT concepts in parallel
 		List<CompletableFuture<Void>> futures = annotations.stream()
 				.map(ann -> CompletableFuture.runAsync(() -> snomedTerminologyService.enrichAnnotation(ann)))
-				.collect(Collectors.toList());
+				.toList();
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
 		return annotations;
