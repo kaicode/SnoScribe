@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 public class SnomedTerminologyService {
 
 	private static final String CONDITION_ECL  = "<404684003 |Clinical finding|";
+	private static final String PROCEDURE_ECL  = "<71388002 |Procedure|";
 	private static final String MEDICATION_ECL = "<763158003 |Medicinal product (product)|";
 
 	/** Matches a run of digits immediately followed by letters, e.g. "5mg" → "5 mg". */
@@ -58,6 +59,9 @@ public class SnomedTerminologyService {
 			if (annotation.getType() == AnnotationType.MEDICATION) {
 				ecl    = MEDICATION_ECL;
 				filter = buildMedicationFilter(annotation);
+			} else if (annotation.getType() == AnnotationType.PROCEDURE) {
+				ecl    = PROCEDURE_ECL;
+				filter = annotation.getNormalisedText();
 			} else {
 				ecl    = CONDITION_ECL;
 				filter = annotation.getNormalisedText();

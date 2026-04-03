@@ -108,6 +108,8 @@ public class LlmProcessorService {
 					String type = entity.get("type");
 					if ("MEDICATION".equals(type)) {
 						annotation.setType(AnnotationType.MEDICATION);
+					} else if ("PROCEDURE".equals(type)) {
+						annotation.setType(AnnotationType.PROCEDURE);
 					} else {
 						annotation.setType(AnnotationType.CONDITION);
 					}

@@ -7,6 +7,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      safelist: [
+        'bg-amber-100', 'bg-amber-200', 'ring-amber-400',
+      ],
       theme: {
         extend: {
           fontFamily: {
@@ -258,7 +261,7 @@
            x-text="`Annotated in ${elapsedSeconds}s`">
         </p>
 
-        <!-- Grouped annotation sections -->
+        <!-- Grouped annotation sections (conditions, then procedures, per subject) -->
         <template x-for="group in groupedAnnotations" :key="group.subject">
           <div class="flex flex-col gap-2">
 
@@ -280,12 +283,12 @@
                 x-text="group.label">
               </h3>
               <span class="ml-auto text-xs text-slate-400 tabular-nums"
-                x-text="group.items.filter(a => a.status !== 'dismissed').length + ' shown'">
+                x-text="group.conditions.filter(a => a.status !== 'dismissed').length + group.procedures.filter(a => a.status !== 'dismissed').length + ' shown'">
               </span>
             </div>
 
-            <!-- Annotation cards -->
-            <template x-for="ann in group.items" :key="ann._id">
+            <!-- Condition cards -->
+            <template x-for="ann in group.conditions" :key="ann._id">
               <div
                 x-show="ann.status !== 'dismissed'"
                 x-transition:leave="transition ease-in duration-200"
@@ -409,6 +412,125 @@
               </div>
             </template>
 
+            <!-- Procedures subheading + cards -->
+            <template x-if="group.procedures.length > 0">
+              <div class="flex flex-col gap-2 mt-1">
+                <div class="flex items-center gap-2 px-1">
+                  <div class="w-2.5 h-2.5 rounded-full shrink-0 bg-amber-500"></div>
+                  <h4 class="text-xs font-bold uppercase tracking-widest text-amber-700">Procedures</h4>
+                  <span class="ml-auto text-xs text-slate-400 tabular-nums"
+                    x-text="group.procedures.filter(a => a.status !== 'dismissed').length + ' shown'">
+                  </span>
+                </div>
+
+                <template x-for="ann in group.procedures" :key="ann._id">
+                  <div
+                    x-show="ann.status !== 'dismissed'"
+                    x-transition:leave="transition ease-in duration-200"
+                    x-transition:leave-start="opacity-100 scale-100"
+                    x-transition:leave-end="opacity-0 scale-95"
+                    @mouseenter="hoveredAnnotationId = ann._id"
+                    @mouseleave="hoveredAnnotationId = null"
+                    class="bg-white rounded-2xl border shadow-sm overflow-hidden flex transition-all duration-200"
+                    :class="{
+                      'border-slate-200':                       ann.status === 'pending',
+                      'border-emerald-300 bg-emerald-50/20':   ann.status === 'accepted',
+                      'ring-2 ring-amber-400':                  hoveredAnnotationId === ann._id
+                    }"
+                    :data-annotation-id="ann._id"
+                  >
+                    <div class="w-1.5 shrink-0 self-stretch bg-amber-400"></div>
+
+                    <div class="flex-1 min-w-0 p-4 flex flex-col gap-2">
+
+                      <div class="flex items-start gap-2">
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-semibold text-slate-800 leading-snug"
+                             x-text="ann.conceptCode ? ann.conceptDisplay : (ann.normalisedText ? ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1) : ann.text)"></p>
+                          <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="`&quot;${ann.text}&quot;`"></p>
+                        </div>
+
+                        <div class="flex gap-1.5 shrink-0" x-show="ann.status === 'pending'">
+                          <button
+                            @click="accept(ann)"
+                            title="Accept"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center
+                                   bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700
+                                   border border-emerald-200 hover:border-emerald-300 transition-all"
+                          >
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          </button>
+                          <button
+                            @click="dismiss(ann)"
+                            title="Dismiss"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center
+                                   bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500
+                                   border border-slate-200 hover:border-red-200 transition-all"
+                          >
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </div>
+
+                        <div x-show="ann.status === 'accepted'"
+                          class="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full
+                                 bg-emerald-100 text-emerald-700 text-xs font-semibold ring-1 ring-emerald-200">
+                          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Accepted
+                        </div>
+                      </div>
+
+                      <div class="flex flex-wrap gap-1.5">
+                        <span
+                          x-show="ann.context"
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1"
+                          :class="{
+                            'bg-emerald-100 text-emerald-800 ring-emerald-200': ann.context === 'CURRENT',
+                            'bg-slate-100 text-slate-600 ring-slate-200':       ann.context === 'HISTORICAL',
+                            'bg-amber-100 text-amber-800 ring-amber-200':       ann.context === 'SUSPECTED'
+                          }"
+                          x-text="ann.context ? ann.context.charAt(0) + ann.context.slice(1).toLowerCase() : ''"
+                        ></span>
+
+                        <span
+                          x-show="ann.laterality"
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                                 bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                          x-text="ann.laterality === 'LEFT_AND_RIGHT' ? 'Bilateral'
+                                 : ann.laterality === 'LEFT' ? 'Left'
+                                 : ann.laterality === 'RIGHT' ? 'Right' : ''"
+                        ></span>
+
+                        <span
+                          x-show="ann.negated"
+                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                 bg-red-100 text-red-700 ring-1 ring-red-200"
+                        >
+                          <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                          </svg>
+                          Negated
+                        </span>
+                      </div>
+
+                      <div x-show="ann.conceptCode" class="flex items-center gap-1.5 pt-0.5">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium
+                                     bg-violet-100 text-violet-800 ring-1 ring-violet-200"
+                          x-text="ann.conceptCode">
+                        </span>
+                      </div>
+
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+
           </div>
         </template>
 
@@ -529,7 +651,7 @@
 
 <script>
   const SAMPLE_NOTES = `* Patient presents for a new patient health check.  States generally feels well.
-* **PMHx:**  Osteoarthritis (right knee), diagnosed 2015.  Mild hypertension, diagnosed 2018. Denies any previous surgeries, hospital admissions, or significant illnesses.
+* **PMHx:**  Osteoarthritis (right knee), diagnosed 2015.  Mild hypertension, diagnosed 2018. Screening colonoscopy 2020 (normal). Denies any other surgeries, hospital admissions, or significant illnesses.
 * **FHx:** Father – MI at 72. Mother – Osteoporosis. Denies any significant family history of cancer or other major illnesses.
 * **SHx:**  Non-smoker.  Social drinks 1-2 glasses of wine per week.  Retired school teacher.  Lives with husband.  Active in local gardening club.
 * **Medications:**
@@ -542,6 +664,7 @@
 
   function annColor(ann) {
     if (ann.type === 'MEDICATION') return 'teal';
+    if (ann.type === 'PROCEDURE') return 'amber';
     if (ann.subject === 'FAMILY') return 'purple';
     if (ann.subject === 'OTHER') return 'slate';
     return 'blue';
@@ -608,18 +731,21 @@
         for (const ann of this.annotations) {
           if (ann.type === 'MEDICATION') continue;
           const s = ann.subject || 'OTHER';
-          if (!groups[s]) groups[s] = [];
-          groups[s].push(ann);
+          if (!groups[s]) groups[s] = { conditions: [], procedures: [] };
+          if (ann.type === 'PROCEDURE') groups[s].procedures.push(ann);
+          else groups[s].conditions.push(ann);
         }
 
         const ctxIdx = c => { const i = CONTEXT_ORDER.indexOf(c); return i === -1 ? 99 : i; };
+        const sortByCtx = (a, b) => ctxIdx(a.context) - ctxIdx(b.context);
 
         return SUBJECT_ORDER
-          .filter(s => groups[s] && groups[s].length > 0)
+          .filter(s => groups[s] && (groups[s].conditions.length > 0 || groups[s].procedures.length > 0))
           .map(s => ({
             subject: s,
             label:   s.charAt(0) + s.slice(1).toLowerCase(),
-            items:   groups[s].slice().sort((a, b) => ctxIdx(a.context) - ctxIdx(b.context))
+            conditions: groups[s].conditions.slice().sort(sortByCtx),
+            procedures: groups[s].procedures.slice().sort(sortByCtx),
           }));
       },
 
