@@ -29,11 +29,13 @@ public class SnomedTerminologyService {
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final RestTemplate restTemplate;
 	private final InfinityRerankService infinityRerankService;
+	private final TerminologySynonymService terminologySynonymService;
 	private final String fhirTxUrl;
 	private final boolean infinityRerankEnabled;
 
 	public SnomedTerminologyService(RestTemplateBuilder builder,
 			InfinityRerankService infinityRerankService,
+			TerminologySynonymService terminologySynonymService,
 			@Value("${fhir.tx.url}") String fhirTxUrl,
 			@Value("${infinity.rerank.enabled:true}") boolean infinityRerankEnabled) {
 		this.restTemplate = builder
@@ -41,6 +43,7 @@ public class SnomedTerminologyService {
 				.readTimeout(Duration.ofSeconds(10))
 				.build();
 		this.infinityRerankService = infinityRerankService;
+		this.terminologySynonymService = terminologySynonymService;
 		this.fhirTxUrl = fhirTxUrl;
 		this.infinityRerankEnabled = infinityRerankEnabled;
 	}
@@ -49,9 +52,12 @@ public class SnomedTerminologyService {
 	 * Looks up the best-matching SNOMED CT concept for the annotation and sets
 	 * {@code conceptCode} and {@code conceptDisplay} if an exact case-insensitive
 	 * match is found. If the terminology server returns no expansion rows, retries
-	 * with {@code ~} appended to the filter for fuzzy search; fuzzy results are
-	 * passed through the reranker. When the reranker assigns a concept, the winning
-	 * expansion term is stored in {@link Annotation#setTerminologyMatchedTerm}.
+	 * with {@code ~} appended to the filter for fuzzy search. If fuzzy still returns
+	 * nothing, asks the LLM for one or two synonyms and searches again with strict
+	 * filter only (no fuzzy on those synonyms). Non-exact expansion rows are passed
+	 * through the reranker.
+	 * When the reranker assigns a concept, the winning expansion term is stored in
+	 * {@link Annotation#setTerminologyMatchedTerm}.
 	 * Failures are logged and silently swallowed so that the annotation is still
 	 * returned without a concept.
 	 */
@@ -75,6 +81,7 @@ public class SnomedTerminologyService {
 				return;
 			}
 
+			// Search for concept (strict, then fuzzy ~)
 			List<FhirConcept> concepts = callFhirExpand(ecl, filter);
 			if (concepts.isEmpty()) {
 				String fuzzy = fuzzyFilter(filter);
@@ -83,8 +90,22 @@ public class SnomedTerminologyService {
 				}
 			}
 
+			String synonymUsedForExpand = null;
+			if (concepts.isEmpty()) {
+				for (String syn : terminologySynonymService.suggestSynonyms(filter, annotation.getType())) {
+					List<FhirConcept> synHits = callFhirExpand(ecl, syn);
+					if (!synHits.isEmpty()) {
+						concepts = synHits;
+						synonymUsedForExpand = syn;
+						break;
+					}
+				}
+			}
+
+			// Does term exactly match any result PT or synonyms?
+			final String synForWhole = synonymUsedForExpand;
 			boolean wholeMatched = concepts.stream()
-					.filter(c -> c.wholeTermFilter(filter))
+					.filter(c -> c.wholeTermFilter(filter) || (synForWhole != null && c.wholeTermFilter(synForWhole)))
 					.findFirst()
 					.map(c -> {
 						annotation.setConceptCode(c.code);
@@ -93,6 +114,7 @@ public class SnomedTerminologyService {
 					})
 					.orElse(false);
 
+			// Use reranker to find result with same meaning
 			if (!wholeMatched && infinityRerankEnabled && !concepts.isEmpty()) {
 				infinityRerankService.tryRerankBestConcept(annotation, filter, concepts);
 			}
