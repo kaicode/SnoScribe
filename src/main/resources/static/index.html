@@ -320,7 +320,7 @@
                   <div class="flex items-start gap-2">
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-semibold text-slate-800 leading-snug"
-                         x-text="ann.conceptCode ? ann.conceptDisplay : (ann.normalisedText ? ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1) : ann.text)"></p>
+                         x-text="displayTitle(ann)"></p>
                       <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="`&quot;${ann.text}&quot;`"></p>
                     </div>
 
@@ -446,7 +446,7 @@
                       <div class="flex items-start gap-2">
                         <div class="flex-1 min-w-0">
                           <p class="text-sm font-semibold text-slate-800 leading-snug"
-                             x-text="ann.conceptCode ? ann.conceptDisplay : (ann.normalisedText ? ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1) : ann.text)"></p>
+                             x-text="displayTitle(ann)"></p>
                           <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="`&quot;${ann.text}&quot;`"></p>
                         </div>
 
@@ -573,7 +573,7 @@
                 <div class="flex items-start gap-2">
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-slate-800 leading-snug"
-                       x-text="ann.conceptCode ? ann.conceptDisplay : (ann.normalisedText ? ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1) : ann.text)"></p>
+                       x-text="displayTitle(ann)"></p>
                     <p class="text-xs text-slate-400 mt-0.5 font-mono truncate" x-text="`&quot;${ann.text}&quot;`"></p>
                   </div>
 
@@ -750,6 +750,20 @@
       },
 
       // ── Methods ───────────────────────────────────────────────
+      displayTitle(ann) {
+        if (ann.terminologyMatchedTerm) {
+          const t = ann.terminologyMatchedTerm;
+          return t.charAt(0).toUpperCase() + t.slice(1);
+        }
+        if (ann.conceptCode && ann.conceptDisplay) {
+          return ann.conceptDisplay;
+        }
+        if (ann.normalisedText) {
+          return ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1);
+        }
+        return ann.text;
+      },
+
       async annotate() {
         const notes = this.notes; // capture before any state mutations
         if (!notes.trim()) return;

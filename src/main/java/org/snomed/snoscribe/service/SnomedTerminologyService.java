@@ -48,8 +48,12 @@ public class SnomedTerminologyService {
 	/**
 	 * Looks up the best-matching SNOMED CT concept for the annotation and sets
 	 * {@code conceptCode} and {@code conceptDisplay} if an exact case-insensitive
-	 * match is found. Failures are logged and silently swallowed so that the
-	 * annotation is still returned without a concept.
+	 * match is found. If the terminology server returns no expansion rows, retries
+	 * with {@code ~} appended to the filter for fuzzy search; fuzzy results are
+	 * passed through the reranker. When the reranker assigns a concept, the winning
+	 * expansion term is stored in {@link Annotation#setTerminologyMatchedTerm}.
+	 * Failures are logged and silently swallowed so that the annotation is still
+	 * returned without a concept.
 	 */
 	public void enrichAnnotation(Annotation annotation) {
 		try {
@@ -72,6 +76,13 @@ public class SnomedTerminologyService {
 			}
 
 			List<FhirConcept> concepts = callFhirExpand(ecl, filter);
+			if (concepts.isEmpty()) {
+				String fuzzy = fuzzyFilter(filter);
+				if (!fuzzy.equals(filter)) {
+					concepts = callFhirExpand(ecl, fuzzy);
+				}
+			}
+
 			boolean wholeMatched = concepts.stream()
 					.filter(c -> c.wholeTermFilter(filter))
 					.findFirst()
@@ -89,6 +100,14 @@ public class SnomedTerminologyService {
 		} catch (Exception e) {
 			logger.warn("SNOMED CT lookup failed for '{}': {}", annotation.getNormalisedText(), e.getMessage());
 		}
+	}
+
+	/** Appends {@code ~} for terminology servers that treat it as a fuzzy match hint (avoids {@code ~~}). */
+	private static String fuzzyFilter(String filter) {
+		if (filter.endsWith("~")) {
+			return filter;
+		}
+		return filter + "~";
 	}
 
 	/**
@@ -139,14 +158,16 @@ public class SnomedTerminologyService {
 				+ "?_format=json"
 				+ "&includeDesignations=true"
 				+ "&url=" + encode("http://snomed.info/sct?fhir_vs=ecl/" + ecl)
-				+ "&filter=" + encode(filter);
+				+ "&filter=" + encode(filter).replace("%7E", "~");
 
 		logger.debug("FHIR expand: {}", url);
 
 		FhirValueSetResponse response = restTemplate.getForObject(url, FhirValueSetResponse.class);
 		if (response == null || response.expansion == null || response.expansion.contains == null) {
+			logger.info("FHIR expand with 0 results: {}", url);
 			return Collections.emptyList();
 		}
+		logger.info("FHIR expand with {} results: {}", response.expansion.contains.size(), url);
 		return response.expansion.contains;
 	}
 

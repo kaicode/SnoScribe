@@ -15,6 +15,8 @@ public class Annotation {
 	private String doseForm;
 	private String conceptCode;
 	private String conceptDisplay;
+	/** Preferred SNOMED term string from rerank (synonym that scored best); shown as the normalised label when set. */
+	private String terminologyMatchedTerm;
 
 	public AnnotationType getType() {
 		return type;
@@ -118,5 +120,13 @@ public class Annotation {
 
 	public void setConceptDisplay(String conceptDisplay) {
 		this.conceptDisplay = conceptDisplay;
+	}
+
+	public String getTerminologyMatchedTerm() {
+		return terminologyMatchedTerm;
+	}
+
+	public void setTerminologyMatchedTerm(String terminologyMatchedTerm) {
+		this.terminologyMatchedTerm = terminologyMatchedTerm;
 	}
 }

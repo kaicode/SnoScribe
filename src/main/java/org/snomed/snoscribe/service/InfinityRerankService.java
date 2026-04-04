@@ -135,7 +135,35 @@ public class InfinityRerankService {
 		if (best != null && bestScore >= minScore) {
 			annotation.setConceptCode(best.code);
 			annotation.setConceptDisplay(best.display);
+			String matchedTerm = bestScoringDocumentForConcept(response.results, docOwner, documents, best);
+			annotation.setTerminologyMatchedTerm(matchedTerm);
 		}
+	}
+
+	/**
+	 * Among rerank hits for the chosen concept, returns the expansion document string
+	 * with the highest relevance score (preferred synonym / matched term).
+	 */
+	private static String bestScoringDocumentForConcept(List<RerankResultItem> results,
+			List<FhirConcept> docOwner, List<String> documents, FhirConcept best) {
+		if (best == null || best.code == null || best.code.isBlank()) {
+			return null;
+		}
+		double top = Double.NEGATIVE_INFINITY;
+		String term = null;
+		for (RerankResultItem item : results) {
+			if (item == null || item.index < 0 || item.index >= docOwner.size() || item.index >= documents.size()) {
+				continue;
+			}
+			if (!best.code.equals(docOwner.get(item.index).code)) {
+				continue;
+			}
+			if (item.relevanceScore > top) {
+				top = item.relevanceScore;
+				term = documents.get(item.index);
+			}
+		}
+		return term != null && !term.isBlank() ? term : best.display;
 	}
 
 	private static String stripTrailingSlash(String url) {

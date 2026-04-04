@@ -57,6 +57,9 @@ class InfinityRerankServiceIT {
 				.isNotNull()
 				.isNotBlank();
 		assertThat(annotation.getConceptDisplay()).isNotBlank();
+		assertThat(annotation.getTerminologyMatchedTerm())
+				.as("rerank should record the expansion term that scored best")
+				.isNotBlank();
 		assertThat(List.of("111", "222", "333", "444", "555"))
 				.contains(annotation.getConceptCode());
 	}
