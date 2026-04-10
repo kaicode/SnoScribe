@@ -1,9 +1,15 @@
 # SnoScribe
 
-A demonstration tool that reads free-text clinical notes and automatically identifies clinical conditions and medications, 
-linking each finding to a standard SNOMED CT concept code and including context. 
+A demonstration tool that reads free-text clinical notes and automatically identifies clinical conditions, procedures, and medications, linking each finding to a standard SNOMED CT concept code with context.
 
-Everything runs locally - no patient data leaves the machine.
+## Strengths
+
+- **Clinical meaning, not just codes** — The model extracts structured findings with negation, subject (patient vs. family), laterality, timing (current / historical / suspected / planned), and medication details where stated, then maps them to SNOMED CT. The output is meant to reflect what the note actually asserts, not a flat list of codes.
+- **No training step** — You deploy and run it: configure a general-purpose chat model and a FHIR terminology endpoint. There is no dataset labelling, fine-tuning, or retraining cycle to operate the pipeline.
+- **SNOMED CT updates without changing the app** — The application does not bundle terminology. Point `fhir.tx.url` at a server that serves your edition; upgrading SNOMED is a matter of loading a new release (or repointing to an updated endpoint) on that infrastructure.
+- **Offline-capable deployment** — With a local LLM (e.g. Ollama) and a local FHIR terminology server on your network, processing can stay disconnected from public APIs. Cloud LLMs or a remote demo terminology server require connectivity.
+
+Privacy depends on how you configure the LLM and terminology server: **Ollama** keeps extraction on your machine; **OpenAI**, **Anthropic**, or **Google** send note text to that provider’s API. The default FHIR terminology endpoint below is a public demo server, so queries leave your machine unless you point `fhir.tx.url` at a local server.
 
 ---
 
@@ -12,16 +18,19 @@ Everything runs locally - no patient data leaves the machine.
 Given a clinical note such as a GP encounter summary, the tool extracts:
 
 **Conditions** — including:
+
 - Whether the condition is active (current), historical, or suspected
 - Which person it applies to (the patient, or a family member)
 - Laterality where relevant (left, right, bilateral)
-- Negated findings (e.g. "denies chest pain")
+- Negated findings (e.g. “denies chest pain”)
+
+**Procedures** — surgeries, endoscopies, imaging, and similar (not diagnoses or drugs), with the same style of subject, laterality, negation, and context, including **planned** procedures where appropriate.
 
 **Medications** — including dose, frequency, route, and dose form where stated in the note.
 
-Each extracted item is then looked up against SNOMED CT via a FHIR Terminology Server, returning the best-matching concept code and preferred display term. This makes the output computable — suitable for downstream analytics, decision support, or integration with clinical systems.
+Each extracted item is then resolved against SNOMED CT via a FHIR terminology server (`ValueSet/$expand` with ECL filters for findings, procedures, and medicinal products). When there is no exact match, the pipeline can use optional **LLM-generated synonyms** and an optional **Infinity** rerank server to choose among expansion candidates.
 
-The annotation is displayed in a simple web interface showing the original note on the left (with entities highlighted by type) and the structured annotations on the right.
+The web UI (`index.html` plus a Vite-built bundle) shows the original note on the left with entities highlighted by type, and structured annotations on the right.
 
 ---
 
@@ -31,19 +40,25 @@ The annotation is displayed in a simple web interface showing the original note 
 Clinical note
      │
      ▼
-Local LLM (Ollama)          ← runs on your machine, no data sent externally
-     │  extracts conditions & medications as structured JSON
-     ▼
-FHIR Terminology Server     ← SNOMED CT concept lookup
-     │  matches each finding to a concept code + display term
-     ▼
-Structured annotations
+Configured chat model (see Configuration)  ←  Ollama (local) or OpenAI / Anthropic / Google
+     │  one call; extracts conditions, procedures & medications as structured JSON
      │
      ▼
-Web UI                      ← highlights in note, cards per entity
+Per-entity enrichment (each entity processed in parallel)
+     │
+     │  1. FHIR $expand on terminology server  —  SNOMED CT lookup; fuzzy filter if expansion empty
+     │  2. Optional synonym LLM + $expand again  —  if still no hits
+     │  3. Optional Infinity rerank              —  when there is no exact expansion match, score
+     │                                            candidate terms and accept the best concept if ≥ threshold
+     │
+     ▼
+Structured annotations (codes + displays)
+     │
+     ▼
+Web UI                                      ←  highlights in note, cards per entity
 ```
 
-The language model and terminology lookup run in parallel for each note, keeping response times low.
+For each request, the app runs **one** LLM call over the full note, then runs this **three-step** enrichment pipeline **in parallel** across entities (FHIR resolution with fuzzy/synonym fallbacks, then optional **reranking**).
 
 ---
 
@@ -53,53 +68,104 @@ The language model and terminology lookup run in parallel for each note, keeping
 |-----------|---------|
 | Java | 17 or later |
 | Maven | 3.8 or later |
-| [Ollama](https://ollama.com) | Running locally on port 11434 |
-| LLM model | `gemma3:12b` (default) or any instruction-tuned model available in Ollama |
-| Memory | 16 GB RAM recommended (accommodates a 12B parameter model) |
-| FHIR Terminology Server | Snowstorm Lite (default: SNOMED International demo instance) |
+| Node.js / npm | Required for the default build (Maven runs `npm run ci-build` in `frontend/` during `generate-resources`) |
+| LLM | See **Configuration** — default path uses [Ollama](https://ollama.com) on port 11434 |
+| Memory | Depends on model; small local models (e.g. 4B) need much less RAM than 12B+ |
+| FHIR Terminology Server | Any FHIR TX supporting SNOMED CT expansion (example below uses SNOMED International’s demo Snowstorm Lite) |
+| Infinity (optional) | Embedding/rerank HTTP service for disambiguating expansion hits — default base URL `http://localhost:7997` |
 
-Pull the default model before first run:
+`application.properties` is **gitignored**; you need a local file with at least `llm.provider` and `fhir.tx.url` (see example below).
+
+Pull a local model before first run if you use Ollama, for example:
+
 ```bash
-ollama pull gemma3:12b
+ollama pull gemma3:4b
 ```
 
 ---
 
-## Running the application
+## Configuration
+
+Create `application.properties` in the project root (or under `src/main/resources` if you prefer classpath config). Minimal example for **local Ollama**:
+
+```properties
+llm.provider=ollama
+llm.ollama.base-url=http://localhost:11434
+llm.ollama.model=gemma3:4b
+fhir.tx.url=https://implementation-demo.snomedtools.org/snowstorm-lite/fhir
+```
+
+Optional keys (defaults shown where applicable):
+
+```properties
+server.port=8080
+
+# Cloud providers — set llm.provider to openai | anthropic | google and supply the API key
+llm.openai.api-key=
+llm.openai.model=gpt-4o
+llm.anthropic.api-key=
+llm.anthropic.model=claude-opus-4-5
+llm.google.api-key=
+llm.google.model=gemini-1.5-pro
+
+# Optional Infinity reranker (disable if not running)
+infinity.rerank.enabled=true
+infinity.rerank.base-url=http://localhost:7997
+infinity.rerank.model=reranker
+infinity.rerank.min-score=0.5
+
+# Extra LLM calls for terminology synonyms when expansion is empty
+terminology.synonym-llm.enabled=true
+```
+
+---
+
+## Building and running
+
+From the repository root:
 
 ```bash
 mvn spring-boot:run
 ```
 
-The web interface is available at **http://localhost:8084**
+- The first build downloads npm dependencies and runs **Vite**, emitting `src/main/resources/static/js/app.js`.
+- To skip the frontend step (you must already have a built `app.js`), run:  
+  `mvn spring-boot:run -Dnpm.skip=true`
 
-To change the model or terminology server, edit `src/main/resources/application.properties`:
+Open the app at **http://localhost:8080**, or whatever you set in `server.port`.
 
-```properties
-ollama.model=gemma3:12b
-fhir.tx.url=https://implementation-demo.snomedtools.org/snowstorm-lite/fhir
+**Optional Infinity reranker** — If `infinity.rerank.enabled` is true (see Configuration), start a local rerank HTTP service or set `infinity.rerank.enabled=false`. To set one up from this repo:
+
+```bash
+bash scripts/setup-infinity-reranker.sh
+```
+
+That creates `scripts/.venv-infinity`, installs [infinity-emb](https://github.com/michaelfeil/infinity), and prints the command to run the server on port **7997** (matching `infinity.rerank.base-url`). After `Application startup complete`, check `curl -s http://localhost:7997/health`.
+
+**Frontend-only development** (rebuild on save into `static/js/`):
+
+```bash
+cd frontend && npm ci && npm run dev
 ```
 
 ---
 
 ## Model evaluation
 
-The `evaluate` profile benchmarks one or more Ollama models against all notes in the `example_notes/` folder and records structured JSON output with timing breakdowns (total, LLM, and FHIR lookup separately).
+The `evaluate` profile benchmarks one or more **model names** against all `.txt` files in `example_notes/` and writes JSON under `model-comparison/`. Names must match the configured `llm.provider` (e.g. Ollama tag names when `llm.provider=ollama`).
 
 **Stage 1 — benchmark:**
+
 ```bash
-mvn spring-boot:run -Dspring-boot.run.arguments=\
-"--spring.profiles.active=evaluate \
- --eval.models=gemma3:12b,qwen2.5:3b-instruct"
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=evaluate --eval.models=gemma3:4b,qwen2.5:3b-instruct"
 ```
 
-Output is written to `model-comparison/<model-name>/<note>.json`.
+Output: `model-comparison/<model-name>/<note>.json` (with `:` in model names normalised to `_` in folder names).
 
-**Stage 2 — ranking** runs automatically after Stage 1 if a `human-expert/` folder exists containing reference annotations (one JSON file per note, using the same format as the model output). Precision, recall, F1 score, and field-level accuracy (subject, context, laterality) are reported per model and written to `model-comparison/ranking.json`.
+**Stage 2 — ranking** runs after Stage 1 if a `human-expert/` directory exists with reference annotations (one JSON file per note, same shape as the model output). Metrics are written to `model-comparison/ranking.json`.
 
 ---
 
 ## Limitations
 
-This project is a proof of concept at this stage. The language model may miss findings, or misclassify context (e.g. family history vs. patient history). Hallucinations are unlikely but possible. 
-Outputs must be reviewed.
+This project is a proof of concept. The language model may miss findings or misclassify context (e.g. family history vs. patient history). Hallucinations are unlikely but possible. Outputs must be reviewed.
