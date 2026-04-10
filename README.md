@@ -2,6 +2,8 @@
 
 A demonstration tool that reads free-text clinical notes and automatically identifies clinical conditions, procedures, and medications, linking each finding to a standard SNOMED CT concept code with context.
 
+A clinician must review the results and pick the information that is useful for the medical record.  
+
 ## Strengths
 
 - **Clinical meaning, not just codes** — The model extracts structured findings with negation, subject (patient vs. family), laterality, timing (current / historical / suspected / planned), and medication details where stated, then maps them to SNOMED CT. The output is meant to reflect what the note actually asserts, not a flat list of codes.
