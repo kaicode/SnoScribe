@@ -15,6 +15,9 @@ public class Annotation {
 	private String doseForm;
 	private String conceptCode;
 	private String conceptDisplay;
+	/** ICD-10 from ConceptMap $translate when mapping exists (patient conditions only). */
+	private String icd10Code;
+	private String icd10Display;
 	/** Preferred SNOMED term string from rerank (synonym that scored best); shown as the normalised label when set. */
 	private String terminologyMatchedTerm;
 
@@ -120,6 +123,22 @@ public class Annotation {
 
 	public void setConceptDisplay(String conceptDisplay) {
 		this.conceptDisplay = conceptDisplay;
+	}
+
+	public String getIcd10Code() {
+		return icd10Code;
+	}
+
+	public void setIcd10Code(String icd10Code) {
+		this.icd10Code = icd10Code;
+	}
+
+	public String getIcd10Display() {
+		return icd10Display;
+	}
+
+	public void setIcd10Display(String icd10Display) {
+		this.icd10Display = icd10Display;
 	}
 
 	public String getTerminologyMatchedTerm() {
