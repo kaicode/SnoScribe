@@ -36,6 +36,13 @@ public class LlmConfig {
 	@Value("${llm.anthropic.model:}")
 	private String anthropicModel;
 
+	/**
+	 * Max tokens the model may emit. Langchain4j Anthropic defaults to 1024, which truncates
+	 * large annotation JSON and breaks parsing — raise this for long clinical notes.
+	 */
+	@Value("${llm.anthropic.max-output-tokens:16384}")
+	private int anthropicMaxOutputTokens;
+
 	@Value("${llm.google.api-key:}")
 	private String googleApiKey;
 
@@ -61,6 +68,7 @@ public class LlmConfig {
 			case "anthropic" -> AnthropicChatModel.builder()
 					.apiKey(anthropicApiKey)
 					.modelName(modelName)
+					.maxTokens(anthropicMaxOutputTokens)
 					.build();
 			case "google" -> GoogleAiGeminiChatModel.builder()
 					.apiKey(googleApiKey)
