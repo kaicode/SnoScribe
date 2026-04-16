@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,12 +23,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen font-sans antialiased">
+<body class="h-full overflow-hidden bg-slate-100 text-slate-800 font-sans antialiased">
 
-<div x-data="annotatorApp()" class="flex flex-col min-h-screen">
+<div x-data="annotatorApp()" class="flex flex-col h-full min-h-0 overflow-hidden">
 
   <!-- ── HEADER ── -->
-  <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
+  <header class="shrink-0 bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
     <div class="max-w-[1600px] mx-auto px-6 py-3 flex items-center gap-3">
       <!-- Logo -->
       <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm shrink-0">
@@ -50,12 +50,12 @@
   </header>
 
   <!-- ── MAIN TWO-PANEL LAYOUT ── -->
-  <main class="flex flex-1 gap-5 p-5 max-w-[1600px] mx-auto w-full">
+  <main class="flex flex-1 min-h-0 gap-5 p-5 max-w-[1600px] mx-auto w-full overflow-hidden">
 
     <!-- ════════════════════════════════════════
          LEFT PANEL – Notes Input
     ════════════════════════════════════════ -->
-    <section class="w-[42%] shrink-0 flex flex-col gap-4">
+    <section class="w-[42%] shrink-0 flex flex-col gap-4 min-h-0 overflow-y-auto">
 
       <!-- Info card -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
@@ -161,12 +161,12 @@
     <!-- ════════════════════════════════════════
          RIGHT PANEL – Results
     ════════════════════════════════════════ -->
-    <section class="flex-1 min-w-0 flex flex-col gap-4">
+    <section class="flex-1 min-w-0 min-h-0 flex flex-col gap-4 overflow-hidden">
 
       <!-- ── Empty state ── -->
       <div
         x-show="!hasResults && !loading && !error"
-        class="flex-1 flex flex-col items-center justify-center text-center gap-5 py-24"
+        class="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-5 py-24 overflow-y-auto"
       >
         <div class="w-24 h-24 rounded-full bg-slate-200 flex items-center justify-center">
           <svg class="w-12 h-12 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -182,7 +182,7 @@
       </div>
 
       <!-- ── Skeleton loader ── -->
-      <div x-show="loading" class="flex flex-col gap-4">
+      <div x-show="loading" class="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
         <!-- Stats skeleton -->
         <div class="grid grid-cols-3 gap-3">
           <template x-for="i in [1,2,3]" :key="i">
@@ -219,7 +219,7 @@
       <!-- ── Error state ── -->
       <div
         x-show="error && !loading"
-        class="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-4"
+        class="shrink-0 bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-4"
       >
         <div class="shrink-0 w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
           <svg class="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -237,10 +237,10 @@
       </div>
 
       <!-- ── Results ── -->
-      <div x-show="hasResults && !loading" class="flex flex-col gap-4">
+      <div x-show="hasResults && !loading" class="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden">
 
         <!-- Summary stats -->
-        <div class="grid grid-cols-3 gap-3">
+        <div class="shrink-0 grid grid-cols-3 gap-3">
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 text-center">
             <div class="text-2xl font-bold text-slate-800 tabular-nums" x-text="totalCount"></div>
             <div class="text-xs text-slate-400 mt-0.5 font-medium">Extracted</div>
@@ -257,9 +257,12 @@
 
         <!-- Timing -->
         <p x-show="elapsedSeconds !== null"
-           class="text-xs text-slate-400 text-right tabular-nums -mt-2"
+           class="shrink-0 text-xs text-slate-400 text-right tabular-nums -mt-2"
            x-text="`Annotated in ${elapsedSeconds}s`">
         </p>
+
+        <!-- Scrollable annotation list (stats stay visible above) -->
+        <div class="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
 
         <!-- Grouped annotation sections (conditions, then procedures, per subject) -->
         <template x-for="group in groupedAnnotations" :key="group.subject">
@@ -640,6 +643,8 @@
           </template>
 
         </div><!-- /medications section -->
+
+        </div><!-- /scrollable annotation list -->
 
       </div><!-- /results -->
 
