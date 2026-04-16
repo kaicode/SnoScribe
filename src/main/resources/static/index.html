@@ -22,6 +22,66 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    /* Print: drop viewport-height clipping and scroll panes so both columns print in full */
+    @media print {
+      /* 30% smaller type (rem-based Tailwind classes follow root) */
+      html {
+        font-size: 70%;
+      }
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
+      }
+      body > div {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+      }
+      header {
+        position: relative !important;
+      }
+      main {
+        max-width: none !important;
+        width: 100% !important;
+        overflow: visible !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        gap: 1.25rem;
+      }
+      main > section:first-child {
+        width: 42% !important;
+        max-width: none !important;
+        flex: 0 0 42% !important;
+        min-height: auto !important;
+        overflow: visible !important;
+      }
+      main > section:last-child {
+        width: auto !important;
+        max-width: none !important;
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        min-height: auto !important;
+        overflow: visible !important;
+      }
+      main .flex-1 {
+        flex-grow: 0 !important;
+        flex-basis: auto !important;
+      }
+      main * {
+        overflow: visible !important;
+        max-height: none !important;
+      }
+      main .notes-highlight-box {
+        min-height: auto !important;
+      }
+      main textarea {
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 12rem;
+      }
+    }
+  </style>
 </head>
 <body class="h-full overflow-hidden bg-slate-100 text-slate-800 font-sans antialiased">
 
@@ -103,7 +163,7 @@
           </button>
         </div>
         <div
-          class="w-full min-h-[22rem] rounded-xl border border-slate-200 bg-slate-50 p-3.5
+          class="notes-highlight-box w-full min-h-[22rem] rounded-xl border border-slate-200 bg-slate-50 p-3.5
                  text-sm text-slate-700 leading-relaxed font-mono whitespace-pre-wrap overflow-auto"
         >
           <template x-for="(seg, i) in segments" :key="i">
