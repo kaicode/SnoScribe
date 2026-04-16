@@ -72,28 +72,23 @@ For each request, the app runs **one** LLM call over the full note, then runs th
 | Maven | 3.8 or later |
 | Node.js / npm | Required for the default build (Maven runs `npm run ci-build` in `frontend/` during `generate-resources`) |
 | LLM | See **Configuration** — default path uses [Ollama](https://ollama.com) on port 11434 |
-| Memory | Depends on model; small local models (e.g. 4B) need much less RAM than 12B+ |
+| Memory | Depends on model; the default Ollama model is 9B-class — allow enough RAM/VRAM (often ~8 GB+ system RAM for inference, more comfortable with headroom) |
 | FHIR Terminology Server | Any FHIR TX supporting SNOMED CT expansion (example below uses SNOMED International’s demo Snowstorm Lite) |
 | Infinity (optional) | Embedding/rerank HTTP service for disambiguating expansion hits — default base URL `http://localhost:7997` |
 
 `application.properties` is **gitignored**; you need a local file with at least `llm.provider` and `fhir.tx.url` (see example below).
 
-Pull a local model before first run if you use Ollama, for example:
-
-```bash
-ollama pull gemma3:4b
-```
-
 ---
 
 ## Configuration
 
-Create `application.properties` in the project root (or under `src/main/resources` if you prefer classpath config). Minimal example for **local Ollama**:
+Create `application.properties` in the project root (or under `src/main/resources` if you prefer classpath config). Minimal example for **local Ollama** (default model tag **`qwen3.5:9b`**, matching the Spring default when `llm.ollama.model` is omitted):
 
 ```properties
 llm.provider=ollama
 llm.ollama.base-url=http://localhost:11434
-llm.ollama.model=gemma3:4b
+llm.ollama.model=qwen3.5:9b
+# llm.ollama.think=false is the default (omit or set true for thinking-capable models)
 fhir.tx.url=https://implementation-demo.snomedtools.org/snowstorm-lite/fhir
 ```
 
@@ -110,6 +105,9 @@ llm.anthropic.model=claude-opus-4-5
 llm.google.api-key=
 llm.google.model=gemini-1.5-pro
 
+# Ollama /api/chat "think" (reasoning); false = faster for Qwen 3.x etc. (default false)
+llm.ollama.think=false
+
 # Optional Infinity reranker (disable if not running)
 infinity.rerank.enabled=true
 infinity.rerank.base-url=http://localhost:7997
@@ -123,6 +121,21 @@ terminology.synonym-llm.enabled=true
 ---
 
 ## Building and running
+
+**Ollama (default `llm.provider=ollama`, model `qwen3.5:9b`)**
+
+1. Install and start **Ollama** from [ollama.com](https://ollama.com) (macOS/Windows: open the app so the daemon runs; Linux: install the package and ensure `ollama serve` is running if needed).
+2. Pull the model the app expects (first download can take a while):
+
+   ```bash
+   ollama pull qwen3.5:9b
+   ```
+
+3. Optional: confirm the model runs: `ollama run qwen3.5:9b` (then exit the chat with `/bye` or Ctrl+D).
+
+SnoScribe talks to Ollama at `llm.ollama.base-url` (default `http://localhost:11434`).
+
+---
 
 From the repository root:
 
@@ -159,7 +172,7 @@ The `evaluate` profile benchmarks one or more **model names** against all `.txt`
 **Stage 1 — benchmark:**
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=evaluate --eval.models=gemma3:4b,qwen2.5:3b-instruct"
+mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=evaluate --eval.models=qwen3.5:9b,qwen2.5:3b-instruct"
 ```
 
 Output: `model-comparison/<model-name>/<note>.json` (with `:` in model names normalised to `_` in folder names).

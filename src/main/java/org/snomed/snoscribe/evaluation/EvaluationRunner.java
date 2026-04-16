@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  * After Stage 1 completes, triggers Stage 2 (ranking) if a human-expert directory exists.
  *
  * Run with:
- * {@code ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=evaluate --eval.models=gemma3:12b,qwen2.5:3b-instruct"}
+ * {@code mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=evaluate --eval.models=qwen3.5:9b,qwen2.5:3b-instruct"}
  */
 @Component
 @Profile("evaluate")

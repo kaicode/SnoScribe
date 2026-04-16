@@ -15,28 +15,31 @@ public class LlmConfig {
 	@Value("${llm.provider}")
 	private String provider;
 
-	@Value("${llm.ollama.base-url:http://localhost:11434}")
+	@Value("${llm.ollama.base-url}")
 	private String ollamaBaseUrl;
 
-	@Value("${llm.ollama.model:gemma3:4b}")
+	@Value("${llm.ollama.model}")
 	private String ollamaModel;
+
+	@Value("${llm.ollama.think}")
+	private boolean ollamaThink;
 
 	@Value("${llm.openai.api-key:}")
 	private String openAiApiKey;
 
-	@Value("${llm.openai.model:gpt-4o}")
+	@Value("${llm.openai.model:}")
 	private String openAiModel;
 
 	@Value("${llm.anthropic.api-key:}")
 	private String anthropicApiKey;
 
-	@Value("${llm.anthropic.model:claude-opus-4-5}")
+	@Value("${llm.anthropic.model:}")
 	private String anthropicModel;
 
 	@Value("${llm.google.api-key:}")
 	private String googleApiKey;
 
-	@Value("${llm.google.model:gemini-1.5-pro}")
+	@Value("${llm.google.model:}")
 	private String googleModel;
 
 	@Bean
@@ -66,6 +69,7 @@ public class LlmConfig {
 			default -> OllamaChatModel.builder()
 					.baseUrl(ollamaBaseUrl)
 					.modelName(modelName)
+					.think(ollamaThink)
 					.build();
 		};
 	}
