@@ -8,7 +8,15 @@
   <script>
     tailwind.config = {
       safelist: [
+        /* Dynamic segment highlight classes (annColor: blue | purple | slate | teal | amber) */
+        'rounded',
+        'bg-blue-100', 'bg-blue-200', 'ring-1', 'ring-blue-400',
+        'bg-purple-100', 'bg-purple-200', 'ring-purple-400',
+        'bg-slate-100', 'bg-slate-200', 'ring-slate-400',
+        'bg-teal-100', 'bg-teal-200', 'ring-teal-400',
         'bg-amber-100', 'bg-amber-200', 'ring-amber-400',
+        /* Annotation card left accent bars */
+        'bg-blue-400', 'bg-purple-400', 'bg-slate-300', 'bg-amber-400', 'bg-teal-400',
       ],
       theme: {
         extend: {
@@ -74,6 +82,18 @@
       }
       main .notes-highlight-box {
         min-height: auto !important;
+        /* Browsers default to hiding backgrounds when printing */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      main .notes-highlight-box span {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      /* Vertical accent strip on annotation cards */
+      main .annotation-card-accent {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       main textarea {
         overflow: visible !important;
@@ -368,7 +388,7 @@
                 :data-annotation-id="ann._id"
               >
                 <!-- Left accent bar -->
-                <div class="w-1.5 shrink-0 self-stretch"
+                <div class="annotation-card-accent w-1.5 shrink-0 self-stretch"
                   :class="{
                     'bg-blue-400':   (ann.subject || 'OTHER') === 'PATIENT',
                     'bg-purple-400': (ann.subject || 'OTHER') === 'FAMILY',
@@ -511,7 +531,7 @@
                     }"
                     :data-annotation-id="ann._id"
                   >
-                    <div class="w-1.5 shrink-0 self-stretch bg-amber-400"></div>
+                    <div class="annotation-card-accent w-1.5 shrink-0 self-stretch bg-amber-400"></div>
 
                     <div class="flex-1 min-w-0 p-4 flex flex-col gap-2">
 
@@ -636,7 +656,7 @@
               :data-annotation-id="ann._id"
             >
               <!-- Left accent bar (teal for medications) -->
-              <div class="w-1.5 shrink-0 self-stretch bg-teal-400"></div>
+              <div class="annotation-card-accent w-1.5 shrink-0 self-stretch bg-teal-400"></div>
 
               <!-- Card body -->
               <div class="flex-1 min-w-0 p-4 flex flex-col gap-2">
