@@ -184,3 +184,7 @@ Output: `model-comparison/<model-name>/<note>.json` (with `:` in model names nor
 ## Limitations
 
 This project is a proof of concept. The language model may miss findings or misclassify context (e.g. family history vs. patient history). Hallucinations are unlikely but possible. Outputs must be reviewed.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt). See the [`LICENSE`](LICENSE) file in this repository.
