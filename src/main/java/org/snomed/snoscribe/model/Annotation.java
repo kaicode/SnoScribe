@@ -20,6 +20,8 @@ public class Annotation {
 	private String icd10Display;
 	/** Preferred SNOMED term string from rerank (synonym that scored best); shown as the normalised label when set. */
 	private String terminologyMatchedTerm;
+	/** Set when SNOMED/FHIR enrichment throws; {@code null} when no error. */
+	private String terminologyError;
 
 	public AnnotationType getType() {
 		return type;
@@ -147,5 +149,13 @@ public class Annotation {
 
 	public void setTerminologyMatchedTerm(String terminologyMatchedTerm) {
 		this.terminologyMatchedTerm = terminologyMatchedTerm;
+	}
+
+	public String getTerminologyError() {
+		return terminologyError;
+	}
+
+	public void setTerminologyError(String terminologyError) {
+		this.terminologyError = terminologyError;
 	}
 }

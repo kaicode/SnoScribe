@@ -34,12 +34,14 @@ public class SnomedTerminologyService {
 	private final RestTemplate restTemplate;
 	private final InfinityRerankService infinityRerankService;
 	private final TerminologySynonymService terminologySynonymService;
+	private final TerminologyTimingRecorder terminologyTimingRecorder;
 	private final String fhirTxUrl;
 	private final boolean infinityRerankEnabled;
 
 	public SnomedTerminologyService(RestTemplateBuilder builder,
 			InfinityRerankService infinityRerankService,
 			TerminologySynonymService terminologySynonymService,
+			TerminologyTimingRecorder terminologyTimingRecorder,
 			@Value("${fhir.tx.url}") String fhirTxUrl,
 			@Value("${infinity.rerank.enabled:true}") boolean infinityRerankEnabled) {
 		this.restTemplate = builder
@@ -48,6 +50,7 @@ public class SnomedTerminologyService {
 				.build();
 		this.infinityRerankService = infinityRerankService;
 		this.terminologySynonymService = terminologySynonymService;
+		this.terminologyTimingRecorder = terminologyTimingRecorder;
 		this.fhirTxUrl = fhirTxUrl;
 		this.infinityRerankEnabled = infinityRerankEnabled;
 	}
@@ -62,8 +65,8 @@ public class SnomedTerminologyService {
 	 * through the reranker.
 	 * When the reranker assigns a concept, the winning expansion term is stored in
 	 * {@link Annotation#setTerminologyMatchedTerm}.
-	 * Failures are logged and silently swallowed so that the annotation is still
-	 * returned without a concept.
+	 * On failure, the error is logged and {@link Annotation#setTerminologyError} is
+	 * set so the annotation is still returned without a concept.
 	 */
 	public void enrichAnnotation(Annotation annotation) {
 		try {
@@ -84,6 +87,8 @@ public class SnomedTerminologyService {
 			if (filter == null || filter.isBlank()) {
 				return;
 			}
+
+			annotation.setTerminologyError(null);
 
 			// Search for concept (strict, then fuzzy ~)
 			List<FhirConcept> concepts = callFhirExpand(ecl, filter);
@@ -126,7 +131,9 @@ public class SnomedTerminologyService {
 			mapIcd10ForPatientCondition(annotation);
 
 		} catch (Exception e) {
-			logger.warn("SNOMED CT lookup failed for '{}': {}", annotation.getNormalisedText(), e.getMessage());
+			logger.warn("Terminology search failed for '{}': {}", annotation.getNormalisedText(), e.getMessage());
+			String msg = e.getMessage();
+			annotation.setTerminologyError(msg != null && !msg.isBlank() ? msg : e.getClass().getSimpleName());
 		}
 	}
 
@@ -160,38 +167,43 @@ public class SnomedTerminologyService {
 	}
 
 	private Icd10Mapping callConceptMapTranslateToIcd10(String snomedCode) {
-		String base = fhirTxUrl.endsWith("/") ? fhirTxUrl.substring(0, fhirTxUrl.length() - 1) : fhirTxUrl;
-		String url = base + "/ConceptMap/$translate"
-				+ "?_format=json"
-				+ "&code=" + encode(snomedCode)
-				+ "&system=" + SNOMED_SYSTEM_URI
-				+ "&targetsystem=" + ICD_10_TARGET_SYSTEM_URI;
+		long t0 = System.nanoTime();
+		try {
+			String base = fhirTxUrl.endsWith("/") ? fhirTxUrl.substring(0, fhirTxUrl.length() - 1) : fhirTxUrl;
+			String url = base + "/ConceptMap/$translate"
+					+ "?_format=json"
+					+ "&code=" + encode(snomedCode)
+					+ "&system=" + SNOMED_SYSTEM_URI
+					+ "&targetsystem=" + ICD_10_TARGET_SYSTEM_URI;
 
-		logger.debug("FHIR ConceptMap translate: {}", url);
+			logger.debug("FHIR ConceptMap translate: {}", url);
 
-		FhirParametersResponse response = restTemplate.getForObject(url, FhirParametersResponse.class);
-		if (response == null || response.parameter == null) {
+			FhirParametersResponse response = restTemplate.getForObject(url, FhirParametersResponse.class);
+			if (response == null || response.parameter == null) {
+				return null;
+			}
+			for (FhirParameter param : response.parameter) {
+				if (!"match".equals(param.name) || param.part == null) {
+					continue;
+				}
+				for (FhirParameterPart part : param.part) {
+					if (!"concept".equals(part.name) || part.valueCoding == null) {
+						continue;
+					}
+					String sys = part.valueCoding.system;
+					String code = part.valueCoding.code;
+					if (code == null || code.isBlank()) {
+						continue;
+					}
+					if (sys != null && sys.startsWith("http://hl7.org/fhir/sid/icd-10")) {
+						return new Icd10Mapping(code, part.valueCoding.display);
+					}
+				}
+			}
 			return null;
+		} finally {
+			terminologyTimingRecorder.addFhirNanos(System.nanoTime() - t0);
 		}
-		for (FhirParameter param : response.parameter) {
-			if (!"match".equals(param.name) || param.part == null) {
-				continue;
-			}
-			for (FhirParameterPart part : param.part) {
-				if (!"concept".equals(part.name) || part.valueCoding == null) {
-					continue;
-				}
-				String sys = part.valueCoding.system;
-				String code = part.valueCoding.code;
-				if (code == null || code.isBlank()) {
-					continue;
-				}
-				if (sys != null && sys.startsWith("http://hl7.org/fhir/sid/icd-10")) {
-					return new Icd10Mapping(code, part.valueCoding.display);
-				}
-			}
-		}
-		return null;
 	}
 
 	private record Icd10Mapping(String code, String display) {}
@@ -245,24 +257,34 @@ public class SnomedTerminologyService {
 	 * from the expansion. Returns an empty list on any error.
 	 */
 	private List<FhirConcept> callFhirExpand(String ecl, String filter) {
-		// Construct the URL manually to avoid double-encoding of the ECL expression.
-		// The `url` query param contains its own `?` and special chars that must
-		// be left as-is for the FHIR server to parse correctly.
-		String url = fhirTxUrl + "/ValueSet/$expand"
-				+ "?_format=json"
-				+ "&includeDesignations=true"
-				+ "&url=" + encode("http://snomed.info/sct?fhir_vs=ecl/" + ecl)
-				+ "&filter=" + encode(filter).replace("%7E", "~");
+		long t0 = System.nanoTime();
+		try {
+			// Construct the URL manually to avoid double-encoding of the ECL expression.
+			// The `url` query param contains its own `?` and special chars that must
+			// be left as-is for the FHIR server to parse correctly.
+			String url = fhirTxUrl + "/ValueSet/$expand"
+					+ "?_format=json"
+					+ "&includeDesignations=true"
+					+ "&url=" + encode("http://snomed.info/sct?fhir_vs=ecl/" + ecl)
+					+ "&filter=" + encode(filter).replace("%7E", "~");
 
-		logger.debug("FHIR expand: {}", url);
+			logger.debug("FHIR expand: {}", url);
 
-		FhirValueSetResponse response = restTemplate.getForObject(url, FhirValueSetResponse.class);
-		if (response == null || response.expansion == null || response.expansion.contains == null) {
-			logger.info("FHIR expand with 0 results: {}", url);
-			return Collections.emptyList();
+			try {
+				FhirValueSetResponse response = restTemplate.getForObject(url, FhirValueSetResponse.class);
+				if (response == null || response.expansion == null || response.expansion.contains == null) {
+					logger.info("FHIR expand with 0 results: {}", url);
+					return Collections.emptyList();
+				}
+				logger.info("FHIR expand with {} results: {}", response.expansion.contains.size(), url);
+				return response.expansion.contains;
+			} catch (Exception e) {
+				logger.warn("FHIR expand failed for TX expand {}: {}", url, e.getMessage());
+				throw e;
+			}
+		} finally {
+			terminologyTimingRecorder.addFhirNanos(System.nanoTime() - t0);
 		}
-		logger.info("FHIR expand with {} results: {}", response.expansion.contains.size(), url);
-		return response.expansion.contains;
 	}
 
 	/** Percent-encodes a string for use in a URL query parameter value. */

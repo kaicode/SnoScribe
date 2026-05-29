@@ -500,6 +500,12 @@
                     </span>
                   </div>
 
+                  <p x-show="ann.terminologyError"
+                    class="text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded-lg px-2 py-1.5 max-w-full break-words mt-0.5">
+                    <span class="font-semibold">Terminology lookup: </span>
+                    <span x-text="ann.terminologyError"></span>
+                  </p>
+
                 </div>
               </div>
             </template>
@@ -617,6 +623,12 @@
                         </span>
                       </div>
 
+                      <p x-show="ann.terminologyError"
+                        class="text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded-lg px-2 py-1.5 max-w-full break-words mt-0.5">
+                        <span class="font-semibold">Terminology lookup: </span>
+                        <span x-text="ann.terminologyError"></span>
+                      </p>
+
                     </div>
                   </div>
                 </template>
@@ -726,6 +738,12 @@
                     x-text="'SNOMED CT: ' + ann.conceptCode">
                   </span>
                 </div>
+
+                <p x-show="ann.terminologyError"
+                  class="text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded-lg px-2 py-1.5 max-w-full break-words mt-0.5">
+                  <span class="font-semibold">Terminology lookup: </span>
+                  <span x-text="ann.terminologyError"></span>
+                </p>
 
               </div>
             </div>
