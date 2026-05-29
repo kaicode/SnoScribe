@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>{@code INFINITY_RERANK_BASE_URL} — override base URL (e.g. {@code http://127.0.0.1:7997})</li>
  *   <li>{@code INFINITY_RERANK_MODEL} — model name (default {@code reranker})</li>
  *   <li>{@code INFINITY_RERANK_MIN_SCORE} — minimum score to assign a concept (default {@code 0.01} for this test)</li>
+ *   <li>{@code INFINITY_RERANK_MAX_CONCURRENT} — max concurrent /rerank calls (default {@code 3})</li>
  * </ul>
  * If {@code INFINITY_RERANK_IT} is not set to {@code true}, this class is skipped so CI and normal {@code mvn test} do not require Infinity.
  */
@@ -107,7 +108,10 @@ class InfinityRerankServiceIT {
 			String baseUrl = System.getenv().getOrDefault("INFINITY_RERANK_BASE_URL", "http://localhost:7997");
 			String model = System.getenv().getOrDefault("INFINITY_RERANK_MODEL", "reranker");
 			double minScore = Double.parseDouble(System.getenv().getOrDefault("INFINITY_RERANK_MIN_SCORE", "0.01"));
-			return new InfinityRerankService(objectMapper, baseUrl, model, minScore);
+			int maxConcurrent = Integer.parseInt(
+					System.getenv().getOrDefault("INFINITY_RERANK_MAX_CONCURRENT", "3"));
+			return new InfinityRerankService(objectMapper, baseUrl, model, minScore, maxConcurrent,
+					new TerminologyTimingRecorder());
 		}
 	}
 }

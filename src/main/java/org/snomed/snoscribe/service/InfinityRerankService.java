@@ -16,11 +16,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 /**
  * Calls the Infinity embedding server's Cohere-style {@code /rerank} API to pick the best
@@ -38,11 +40,15 @@ public class InfinityRerankService {
 	private final String baseUrl;
 	private final String model;
 	private final double minScore;
+	private final Semaphore rerankConcurrency;
+	private final TerminologyTimingRecorder terminologyTimingRecorder;
 
 	public InfinityRerankService(ObjectMapper objectMapper,
 			@Value("${infinity.rerank.base-url:http://localhost:7997}") String baseUrl,
 			@Value("${infinity.rerank.model:reranker}") String model,
-			@Value("${infinity.rerank.min-score:0.5}") double minScore) {
+			@Value("${infinity.rerank.min-score:0.5}") double minScore,
+			@Value("${infinity.rerank.max-concurrent-requests:3}") int maxConcurrentRequests,
+			TerminologyTimingRecorder terminologyTimingRecorder) {
 		this.objectMapper = objectMapper;
 		// HTTP/1.1 only: Java's HttpClient tries h2c upgrade on http:// by default; uvicorn
 		// (Infinity) mishandles that and the POST body can arrive empty → FastAPI 422 "body" required.
@@ -53,6 +59,9 @@ public class InfinityRerankService {
 		this.baseUrl = stripTrailingSlash(baseUrl);
 		this.model = model;
 		this.minScore = minScore;
+		int permits = Math.max(1, maxConcurrentRequests);
+		this.rerankConcurrency = new Semaphore(permits);
+		this.terminologyTimingRecorder = terminologyTimingRecorder;
 	}
 
 	/**
@@ -93,14 +102,26 @@ public class InfinityRerankService {
 				.POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
 				.build();
 
-		HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-		if (httpResponse.statusCode() != 200) {
-			throw new IOException("Infinity rerank returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
+		HttpResponse<String> httpResponse;
+		rerankConcurrency.acquire();
+		long t0 = System.nanoTime();
+		try {
+			try {
+				httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			} catch (HttpTimeoutException e) {
+				throw new IOException("Infinity rerank timeout");
+			}
+			if (httpResponse.statusCode() != 200) {
+				throw new IOException("Infinity rerank returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
+			}
+		} finally {
+			terminologyTimingRecorder.addRerankNanos(System.nanoTime() - t0);
+			rerankConcurrency.release();
 		}
 
 		RerankResponse response = objectMapper.readValue(httpResponse.body(), RerankResponse.class);
 		if (response == null || response.results == null || response.results.isEmpty()) {
-			logger.debug("Infinity rerank returned no results for filter '{}'", filter);
+			logger.info("Infinity rerank returned no results for filter '{}'", filter);
 			return;
 		}
 
@@ -137,6 +158,7 @@ public class InfinityRerankService {
 			annotation.setConceptDisplay(best.display);
 			String matchedTerm = bestScoringDocumentForConcept(response.results, docOwner, documents, best);
 			annotation.setTerminologyMatchedTerm(matchedTerm);
+			logger.info("Infinity chose {} for {} score {}", best.display, filter, bestScore);
 		}
 	}
 
