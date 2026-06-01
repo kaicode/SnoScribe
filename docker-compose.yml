@@ -1,26 +1,9 @@
-services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: snoscribe-ollama
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    environment:
-      OLLAMA_MAX_LOADED_MODELS: "1"
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-        reservations:
-          memory: 6G
+# Base stack: SnoScribe + Infinity reranker.
+# Local LLM:  docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build
+# Cloud LLM:  docker compose -f docker-compose.yml -f docker-compose.cloud-llm.yml up --build
+# See docs/run/
 
+services:
   infinity:
     image: michaelf34/infinity:latest-cpu
     platform: linux/amd64
@@ -68,17 +51,11 @@ services:
     image: snoscribe:local
     container_name: snoscribe-app
     depends_on:
-      ollama:
-        condition: service_healthy
       infinity:
         condition: service_healthy
     ports:
       - "8080:8080"
     environment:
-      LLM_PROVIDER: ollama
-      LLM_OLLAMA_BASE_URL: http://ollama:11434
-      LLM_OLLAMA_MODEL: ${LLM_OLLAMA_MODEL:-gemma4:e2b}
-      LLM_OLLAMA_THINK: "false"
       FHIR_TX_URL: ${FHIR_TX_URL:-https://implementation-demo.snomedtools.org/snowstorm-lite/fhir}
       INFINITY_RERANK_BASE_URL: http://infinity:7997
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
@@ -96,5 +73,4 @@ services:
           memory: 512M
 
 volumes:
-  ollama_data:
   infinity_hf_cache:

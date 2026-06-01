@@ -1,0 +1,18 @@
+# Cloud LLM: SnoScribe + Infinity only (no Ollama). Merge with docker-compose.yml.
+# Set LLM_PROVIDER and provider keys in .env — see docs/run/docker-cloud-llm.md
+# docker compose -f docker-compose.yml -f docker-compose.cloud-llm.yml up --build
+
+services:
+  snoscribe:
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-azure}
+      LLM_AZURE_BASE_URL: ${LLM_AZURE_BASE_URL:-}
+      LLM_AZURE_API_KEY: ${LLM_AZURE_API_KEY:-}
+      LLM_AZURE_MODEL: ${LLM_AZURE_MODEL:-}
+      LLM_AZURE_DEPLOYMENT_NAME: ${LLM_AZURE_DEPLOYMENT_NAME:-}
+      LLM_OPENAI_API_KEY: ${LLM_OPENAI_API_KEY:-}
+      LLM_OPENAI_MODEL: ${LLM_OPENAI_MODEL:-}
+      LLM_ANTHROPIC_API_KEY: ${LLM_ANTHROPIC_API_KEY:-}
+      LLM_ANTHROPIC_MODEL: ${LLM_ANTHROPIC_MODEL:-}
+      LLM_GOOGLE_API_KEY: ${LLM_GOOGLE_API_KEY:-}
+      LLM_GOOGLE_MODEL: ${LLM_GOOGLE_MODEL:-}

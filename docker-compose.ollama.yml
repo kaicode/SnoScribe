@@ -1,0 +1,40 @@
+# Local LLM: adds Ollama and wires SnoScribe to it. Merge with docker-compose.yml.
+# docker compose -f docker-compose.yml -f docker-compose.ollama.yml up --build
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: snoscribe-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 6G
+
+  snoscribe:
+    depends_on:
+      ollama:
+        condition: service_healthy
+      infinity:
+        condition: service_healthy
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_OLLAMA_BASE_URL: http://ollama:11434
+      LLM_OLLAMA_MODEL: ${LLM_OLLAMA_MODEL:-gemma4:e2b}
+      LLM_OLLAMA_THINK: "false"
+
+volumes:
+  ollama_data:

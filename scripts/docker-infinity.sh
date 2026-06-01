@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Start/stop/logs only the Infinity rerank service from docker-compose.yml (port 7997).
+# Start/stop/logs only the Infinity rerank service (base docker-compose.yml, port 7997).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
+COMPOSE=(docker compose -f docker-compose.yml)
 
 usage() {
 	echo "Usage: $(basename "$0") [start|stop|logs]" >&2
@@ -21,14 +22,14 @@ usage_err() {
 cmd="${1:-start}"
 case "${cmd}" in
 	start | up)
-		docker compose up -d infinity
+		"${COMPOSE[@]}" up -d infinity
 		echo "Infinity: http://localhost:7997  (health: curl -s http://localhost:7997/health)"
 		;;
 	stop | down)
-		docker compose stop infinity
+		"${COMPOSE[@]}" stop infinity
 		;;
 	logs)
-		docker compose logs -f infinity
+		"${COMPOSE[@]}" logs -f infinity
 		;;
 	-h | --help | help)
 		usage

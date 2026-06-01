@@ -3,7 +3,7 @@ FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src src
-RUN mvn -B -DskipTests package
+RUN mvn -B -Dmaven.test.skip=true -Ddependency-check.skip=true package
 
 # Runtime: JRE + curl for Compose healthchecks
 FROM eclipse-temurin:17-jre-jammy
