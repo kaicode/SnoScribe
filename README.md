@@ -11,7 +11,7 @@ A clinician must review the results and pick the information that is useful for 
 - **SNOMED CT updates without changing the app** — The application does not bundle terminology. Point `fhir.tx.url` at a server that serves your edition; upgrading SNOMED is a matter of loading a new release (or repointing to an updated endpoint) on that infrastructure.
 - **Offline-capable deployment** — With a local LLM (e.g. Ollama) and a local FHIR terminology server on your network, processing can stay disconnected from public APIs. Cloud LLMs or a remote demo terminology server require connectivity.
 
-Privacy depends on how you configure the LLM and terminology server: **Ollama** keeps extraction on your machine; **OpenAI**, **Anthropic**, or **Google** send note text to that provider’s API. The default FHIR terminology endpoint below is a public demo server, so queries leave your machine unless you point `fhir.tx.url` at a local server.
+Privacy depends on how you configure the LLM and terminology server: **Ollama** keeps extraction on your machine; **Microsoft Foundry (Azure)**, **OpenAI**, **Anthropic**, or **Google** send note text to that endpoint’s API. The default FHIR terminology endpoint below is a public demo server, so queries leave your machine unless you point `fhir.tx.url` at a local server.
 
 ---
 
@@ -106,6 +106,14 @@ llm.anthropic.model=claude-opus-4-5
 llm.google.api-key=
 llm.google.model=gemini-1.5-pro
 
+# Microsoft Foundry — Qwen/Gemma (OpenAI-compatible /v1/chat/completions on your deployment URL)
+#llm.provider=azure
+#llm.azure.base-url=https://YOUR-ENDPOINT/v1
+#llm.azure.api-key=${AZURE_ML_API_KEY}
+#llm.azure.model=Qwen/Qwen3.5-9B
+#llm.azure.deployment-name=
+#llm.azure.max-output-tokens=16384
+
 # Ollama /api/chat "think" (reasoning); false = faster for Qwen 3.x etc. (default false)
 llm.ollama.think=false
 
@@ -134,6 +142,25 @@ terminology.synonym-llm.enabled=true
 3. Optional: confirm the model runs: `ollama run qwen3.5:9b` (then exit the chat with `/bye` or Ctrl+D).
 
 SnoScribe talks to Ollama at `llm.ollama.base-url` (default `http://localhost:11434`).
+
+**Microsoft Foundry — Qwen or Gemma (`llm.provider=azure`)**
+
+1. In [Microsoft Foundry](https://ai.azure.com), deploy a catalog model (Qwen or Gemma) to a managed online endpoint.
+2. From the deployment **Code** tab, copy the scoring URL (use the OpenAI route: base URL ending in `/v1`, not `/generate`), the API key, and the catalog **model** id.
+3. Set `AZURE_ML_API_KEY` in your environment (do not commit keys). Use the templates `application-azure-qwen.properties` or `application-azure-gemma.properties`, or add the `llm.azure.*` keys to your gitignored `application.properties`.
+4. If multiple deployments share one URL, set `llm.azure.deployment-name` (sent as the `azureml-model-deployment` header).
+5. Run with a profile, for example:
+
+   ```bash
+   export AZURE_ML_API_KEY='...'
+   mvn spring-boot:run -Dspring-boot.run.profiles=azure-qwen
+   ```
+
+   Or: `mvn spring-boot:run -Dspring-boot.run.arguments="--spring.config.additional-location=application-azure-qwen.properties"`.
+
+6. **Smoke test:** POST a short note to `http://localhost:8080/` (or your `server.port`) and confirm annotations return as JSON.
+
+Use one profile per endpoint when Qwen and Gemma are separate deployments. Chat Completions is used (not the Responses API); prefer non-thinking model SKUs unless you have verified chat completions in the Foundry playground.
 
 **Infinity (Docker)**
 
@@ -217,7 +244,7 @@ curl -s -X POST http://localhost:7997/rerank \
 
 ## Model evaluation
 
-The `evaluate` profile benchmarks one or more **model names** against all `.txt` files in `example_notes/` and writes JSON under `model-comparison/`. Names must match the configured `llm.provider` (e.g. Ollama tag names when `llm.provider=ollama`).
+The `evaluate` profile benchmarks one or more **model names** against all `.txt` files in `example_notes/` and writes JSON under `model-comparison/`. Names must match the configured `llm.provider` (e.g. Ollama tag names when `llm.provider=ollama`, or Foundry catalog ids when `llm.provider=azure`).
 
 **Stage 1 — benchmark:**
 
