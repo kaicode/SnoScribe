@@ -1,0 +1,7 @@
+.git
+.github
+.cursor
+target
+application.properties
+model-comparison
+**/.DS_Store

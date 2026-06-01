@@ -1,4 +1,7 @@
 .*
+!.dockerignore
+!.env.example
 target
 model-comparison
 application.properties
+private*

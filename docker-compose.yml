@@ -1,0 +1,100 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: snoscribe-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 6G
+
+  infinity:
+    image: michaelf34/infinity:latest-cpu
+    platform: linux/amd64
+    container_name: snoscribe-infinity
+    volumes:
+      - infinity_hf_cache:/app/.cache
+    ports:
+      - "7997:7997"
+    environment:
+      HF_HOME: /app/.cache
+    command:
+      - v2
+      - --model-id
+      - BAAI/bge-reranker-v2-m3
+      - --served-model-name
+      - reranker
+      - --port
+      - "7997"
+      - --engine
+      - torch
+      - --no-bettertransformer
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7997/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  snoscribe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: snoscribe:local
+    container_name: snoscribe-app
+    depends_on:
+      ollama:
+        condition: service_healthy
+      infinity:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_OLLAMA_BASE_URL: http://ollama:11434
+      LLM_OLLAMA_MODEL: ${LLM_OLLAMA_MODEL:-gemma4:e2b}
+      LLM_OLLAMA_THINK: "false"
+      FHIR_TX_URL: ${FHIR_TX_URL:-https://implementation-demo.snomedtools.org/snowstorm-lite/fhir}
+      INFINITY_RERANK_BASE_URL: http://infinity:7997
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/ >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 512M
+
+volumes:
+  ollama_data:
+  infinity_hf_cache:

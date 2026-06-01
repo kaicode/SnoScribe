@@ -158,7 +158,7 @@ public class InfinityRerankService {
 			annotation.setConceptDisplay(best.display);
 			String matchedTerm = bestScoringDocumentForConcept(response.results, docOwner, documents, best);
 			annotation.setTerminologyMatchedTerm(matchedTerm);
-			logger.info("Infinity chose {} for {} score {}", best.display, filter, bestScore);
+			logger.info("Infinity chose '{}' for '{}' score {}", best.display, filter, bestScore);
 		}
 	}
 

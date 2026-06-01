@@ -30,7 +30,7 @@ Given a clinical note such as a GP encounter summary, the tool extracts:
 
 **Medications** — including dose, frequency, route, and dose form where stated in the note.
 
-Each extracted item is then resolved against SNOMED CT via a FHIR terminology server (`ValueSet/$expand` with ECL filters for findings, procedures, and medicinal products). When there is no exact match, the pipeline can use optional **LLM-generated synonyms** and an optional **Infinity** rerank server to choose among expansion candidates.
+Each extracted item is then resolved against SNOMED CT via a FHIR terminology server (`ValueSet/$expand` with ECL filters for findings, procedures, and medicinal products). When there is no exact match, the pipeline can use optional **LLM-generated synonyms** and an **Infinity** rerank server to choose among expansion candidates.
 
 The web UI (`index.html` plus a Vite-built bundle) shows the original note on the left with entities highlighted by type, and structured annotations on the right.
 
@@ -50,7 +50,7 @@ Per-entity enrichment (each entity processed in parallel)
      │
      │  1. FHIR $expand on terminology server  —  SNOMED CT lookup; fuzzy filter if expansion empty
      │  2. Optional synonym LLM + $expand again  —  if still no hits
-     │  3. Optional Infinity rerank              —  when there is no exact expansion match, score
+     │  3. Infinity rerank                       —  when there is no exact expansion match, score
      │                                            candidate terms and accept the best concept if ≥ threshold
      │
      ▼
@@ -60,7 +60,7 @@ Structured annotations (codes + displays)
 Web UI                                      ←  highlights in note, cards per entity
 ```
 
-For each request, the app runs **one** LLM call over the full note, then runs this **three-step** enrichment pipeline **in parallel** across entities (FHIR resolution with fuzzy/synonym fallbacks, then optional **reranking**).
+For each request, the app runs **one** LLM call over the full note, then runs this **three-step** enrichment pipeline **in parallel** across entities (FHIR resolution with fuzzy/synonym fallbacks, then **Infinity reranking**).
 
 ---
 
@@ -74,7 +74,8 @@ For each request, the app runs **one** LLM call over the full note, then runs th
 | LLM | See **Configuration** — default path uses [Ollama](https://ollama.com) on port 11434 |
 | Memory | Depends on model; the default Ollama model is 9B-class — allow enough RAM/VRAM (often ~8 GB+ system RAM for inference, more comfortable with headroom) |
 | FHIR Terminology Server | Any FHIR TX supporting SNOMED CT expansion (example below uses SNOMED International’s demo Snowstorm Lite) |
-| Infinity (optional) | Embedding/rerank HTTP service for disambiguating expansion hits — default base URL `http://localhost:7997` |
+| Docker | Compose v2 — runs the **Infinity** rerank service (see **Building and running** or **Docker**) |
+| Infinity | Rerank HTTP service for disambiguating expansion hits — port **7997** (`http://localhost:7997` by default) |
 
 `application.properties` is **gitignored**; you need a local file with at least `llm.provider` and `fhir.tx.url` (see example below).
 
@@ -108,8 +109,7 @@ llm.google.model=gemini-1.5-pro
 # Ollama /api/chat "think" (reasoning); false = faster for Qwen 3.x etc. (default false)
 llm.ollama.think=false
 
-# Optional Infinity reranker (disable if not running)
-infinity.rerank.enabled=true
+# Infinity reranker (Docker on port 7997; defaults match docker-compose.yml)
 infinity.rerank.base-url=http://localhost:7997
 infinity.rerank.model=reranker
 infinity.rerank.min-score=0.5
@@ -135,6 +135,16 @@ terminology.synonym-llm.enabled=true
 
 SnoScribe talks to Ollama at `llm.ollama.base-url` (default `http://localhost:11434`).
 
+**Infinity (Docker)**
+
+Start the rerank container before running the app (port **7997**, matching `infinity.rerank.base-url`):
+
+```bash
+./scripts/docker-infinity.sh          # docker compose up -d infinity
+```
+
+Confirm it is up: `curl -s http://localhost:7997/health`. See **Docker** below for the full stack or `logs` / `stop`.
+
 ---
 
 From the repository root:
@@ -149,19 +159,59 @@ mvn spring-boot:run
 
 Open the app at **http://localhost:8080**, or whatever you set in `server.port`.
 
-**Optional Infinity reranker** — If `infinity.rerank.enabled` is true (see Configuration), start a local rerank HTTP service or set `infinity.rerank.enabled=false`. To set one up from this repo:
-
-```bash
-bash scripts/setup-infinity-reranker.sh
-```
-
-That creates `scripts/.venv-infinity`, installs [infinity-emb](https://github.com/michaelfeil/infinity), and prints the command to run the server on port **7997** (matching `infinity.rerank.base-url`). After `Application startup complete`, check `curl -s http://localhost:7997/health`.
-
 **Frontend-only development** (rebuild on save into `static/js/`):
 
 ```bash
 cd frontend && npm ci && npm run dev
 ```
+
+---
+
+## Docker (SnoScribe + Infinity + Ollama)
+
+The stack runs three services: **SnoScribe** (Spring Boot), **Infinity** (rerank on port 7997), and **Ollama** (LLM on port 11434). Terminology uses a **remote Snowstorm** (or any FHIR TX) URL—nothing SNOMED-related runs inside Compose.
+
+**Prerequisites:** Docker with Compose v2; the remote `fhir.tx.url` must be reachable from the `snoscribe-app` container (firewall/VPN). About **14 GB RAM**: compose sets soft limits (~8 GB Ollama, ~4 GB Infinity, ~1.5 GB JVM)—tune in `docker-compose.yml` if the host is tight. Prefer a smaller Gemma 4 tag (for example `gemma4:e2b`) so Ollama, Infinity, and the JVM fit comfortably. On **Apple Silicon**, Infinity uses `platform: linux/amd64` (upstream image has no `arm64` build); that emulation often needs the higher Infinity limit and is slower than native Linux **amd64**.
+
+From the repository root:
+
+```bash
+cp .env.example .env   # optional; edit FHIR_TX_URL / LLM_OLLAMA_MODEL
+docker compose up --build
+```
+
+After containers are up, pull the Ollama model once (match `LLM_OLLAMA_MODEL`, default `gemma4:e2b`):
+
+```bash
+docker compose exec ollama ollama pull gemma4:e2b
+```
+
+Open **http://localhost:8080**.
+
+**Infinity only** — run just the rerank container (for example with `mvn spring-boot:run` on the host and `infinity.rerank.base-url=http://localhost:7997`):
+
+```bash
+./scripts/docker-infinity.sh          # start (same as: docker compose up -d infinity)
+./scripts/docker-infinity.sh logs     # follow logs
+./scripts/docker-infinity.sh stop     # stop
+```
+
+**Useful checks**
+
+- Infinity: `curl -s http://localhost:7997/health`
+- Ollama: `curl -s http://localhost:11434/` or `docker compose exec ollama ollama list`
+- Rerank API (same shape as `InfinityRerankService`):  
+  `curl -s http://localhost:7997/rank` — **wrong**; the app posts to `/rerank`. Example:
+
+```bash
+curl -s -X POST http://localhost:7997/rerank \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"reranker","query":"diabetes","documents":["diabetes mellitus","hypertension"]}'
+```
+
+**Configuration:** Compose passes `LLM_OLLAMA_BASE_URL=http://ollama:11434` and `INFINITY_RERANK_BASE_URL=http://infinity:7997`. Override terminology and model via `.env` (`FHIR_TX_URL`, `LLM_OLLAMA_MODEL`) or your shell; see `docker-compose.yml` for defaults.
+
+**If Infinity fails to start** with `--engine torch`, try removing that flag (or follow [infinity CPU image](https://github.com/michaelfeil/infinity) guidance for your platform). The pinned model is `BAAI/bge-reranker-v2-m3` with served name `reranker`.
 
 ---
 

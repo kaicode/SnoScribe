@@ -20,7 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration test against a live Infinity rerank server (default {@code http://localhost:7997}).
  * <p>
- * Run from the project root:
+ * Start Infinity via Docker ({@code ./scripts/docker-infinity.sh} or {@code docker compose up -d infinity}),
+ * then from the project root:
  * <pre>
  * INFINITY_RERANK_IT=true mvn test -Dtest=InfinityRerankServiceIT
  * </pre>
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringJUnitConfig(InfinityRerankServiceIT.MinimalContext.class)
 @Tag("integration")
 @EnabledIfEnvironmentVariable(named = "INFINITY_RERANK_IT", matches = "true",
-		disabledReason = "Set INFINITY_RERANK_IT=true and start Infinity rerank on INFINITY_RERANK_BASE_URL (default http://localhost:7997)")
+		disabledReason = "Set INFINITY_RERANK_IT=true, start Infinity via Docker (./scripts/docker-infinity.sh), default http://localhost:7997")
 class InfinityRerankServiceIT {
 
 	@Autowired
