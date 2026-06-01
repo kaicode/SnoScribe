@@ -233,7 +233,8 @@ Output: `model-comparison/<model-name>/<note>.json` (with `:` in model names nor
 
 ## Limitations
 
-This project is a proof of concept. The language model may miss findings or misclassify context (e.g. family history vs. patient history). Hallucinations are unlikely but possible. Outputs must be reviewed.
+This project is open source and in development. You must perform your own clinical testing and evaluation for your use case.  
+A language model may miss findings or misclassify context (e.g. family history vs. patient history). Hallucinations are unlikely but possible. Outputs must be reviewed.
 
 ## License
 
