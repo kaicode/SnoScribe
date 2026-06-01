@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -31,6 +32,9 @@ import java.util.regex.Pattern;
 public class LlmProcessorService {
 
 	private static final Pattern JSON_CODE_BLOCK = Pattern.compile("^\\s*```(?:json)?\\s*\\n?(.*)\\n?```\\s*$", Pattern.DOTALL);
+
+	private static final String LLM_CONNECTION_FAILURE_MESSAGE =
+			"Failed to connect to the LLM service. Check that the LLM service is running and reachable.";
 
 	private final ChatModel defaultModel;
 	private final LlmConfig llmConfig;
@@ -73,8 +77,21 @@ public class LlmProcessorService {
 			List<Map<String, String>> response = toStringMapList(rawList);
 			return extractContentFromResponse(response);
 		} catch (Exception e) {
+			if (isConnectFailure(e)) {
+				logger.error(LLM_CONNECTION_FAILURE_MESSAGE, e);
+				throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR, LLM_CONNECTION_FAILURE_MESSAGE, e);
+			}
 			throw new ServiceException(HttpStatus.INTERNAL_SERVER_ERROR, "Error processing document", e);
 		}
+	}
+
+	private static boolean isConnectFailure(Throwable throwable) {
+		for (Throwable t = throwable; t != null; t = t.getCause()) {
+			if (t instanceof ConnectException) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private String stripJsonCodeBlock(String content) {
