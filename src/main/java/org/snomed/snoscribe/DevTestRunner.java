@@ -43,7 +43,7 @@ public class DevTestRunner {
 					* Paracetamol 500mg PRN for pain
 				* **Allergies:** NKDA (No Known Drug Allergies)
 				"""
-		);
+		).getAnnotations();
 		System.out.println(objectMapper.writeValueAsString(response));
 		System.out.printf("Test complete (%s seconds).%n", (new Date().getTime() - start.getTime()) / 1000);
 	}

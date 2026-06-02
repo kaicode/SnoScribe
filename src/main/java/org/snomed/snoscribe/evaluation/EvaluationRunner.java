@@ -105,7 +105,8 @@ public class EvaluationRunner implements ApplicationRunner {
 
 				try {
 					// LLM call
-					List<Annotation> annotations = llmProcessorService.processDocument(document, model);
+					var llmResult = llmProcessorService.processDocument(document, model);
+					List<Annotation> annotations = llmResult.getAnnotations();
 					long afterLlm = System.currentTimeMillis();
 
 					// Parallel terminology enrichment (FHIR + optional rerank, synonym LLM, etc.)
@@ -123,7 +124,7 @@ public class EvaluationRunner implements ApplicationRunner {
 					long afterFhir = System.currentTimeMillis();
 
 					double totalSeconds = round1dp((afterFhir - totalStart) / 1000.0);
-					double llmSeconds = round1dp((afterLlm - totalStart) / 1000.0);
+					double llmSeconds = llmResult.getLlmSeconds();
 					double enrichWallSeconds = round1dp((afterFhir - afterLlm) / 1000.0);
 					double fhirSumSeconds = round1dp(timingSnap.fhirSeconds());
 					double rerankSumSeconds = round1dp(timingSnap.rerankSeconds());

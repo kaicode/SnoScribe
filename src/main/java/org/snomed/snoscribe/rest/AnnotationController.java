@@ -1,7 +1,9 @@
 package org.snomed.snoscribe.rest;
 
 import org.snomed.snoscribe.exception.ServiceException;
+import org.snomed.snoscribe.model.AnnotateResponse;
 import org.snomed.snoscribe.model.Annotation;
+import org.snomed.snoscribe.model.LlmProcessResult;
 import org.snomed.snoscribe.service.LlmProcessorService;
 import org.snomed.snoscribe.service.SnomedTerminologyService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +29,10 @@ public class AnnotationController {
 	}
 
 	@PostMapping("/annotate")
-	public List<Annotation> processDocument(@RequestBody DocumentRequest request) throws ServiceException {
-		List<Annotation> annotations = llmProcessorService.processDocument(request.getDocument());
+	public AnnotateResponse processDocument(@RequestBody DocumentRequest request) throws ServiceException {
+		long totalStart = System.currentTimeMillis();
+		LlmProcessResult llmResult = llmProcessorService.processDocument(request.getDocument());
+		List<Annotation> annotations = llmResult.getAnnotations();
 
 		// Enrich all annotations with SNOMED CT concepts in parallel
 		List<CompletableFuture<Void>> futures = annotations.stream()
@@ -36,7 +40,12 @@ public class AnnotationController {
 				.toList();
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-		return annotations;
+		double totalSeconds = round1dp((System.currentTimeMillis() - totalStart) / 1000.0);
+		return new AnnotateResponse(annotations, totalSeconds, llmResult.getLlmSeconds());
+	}
+
+	private static double round1dp(double value) {
+		return Math.round(value * 10.0) / 10.0;
 	}
 
 	// Inner class for request body

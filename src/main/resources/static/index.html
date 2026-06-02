@@ -336,9 +336,11 @@
         </div>
 
         <!-- Timing -->
-        <p x-show="elapsedSeconds !== null"
-           class="shrink-0 text-xs text-slate-400 text-right tabular-nums -mt-2"
-           x-text="`Annotated in ${elapsedSeconds}s`">
+        <p x-show="totalSeconds !== null"
+           class="shrink-0 text-xs text-slate-400 text-right tabular-nums -mt-2 cursor-default"
+           @mouseenter="timingHovered = true"
+           @mouseleave="timingHovered = false"
+           x-text="timingLabel">
         </p>
 
         <!-- Scrollable annotation list (stats stay visible above) -->
@@ -822,7 +824,9 @@
       error:               null,
       annotations:         [],
       hoveredAnnotationId: null,
-      elapsedSeconds:      null,
+      totalSeconds:        null,
+      llmSeconds:          null,
+      timingHovered:       false,
 
       // ── Computed getters ──────────────────────────────────────
       get hasResults()    { return this.annotations.length > 0; },
@@ -836,6 +840,16 @@
 
       get medicationAnnotations() {
         return this.annotations.filter(a => a.type === 'MEDICATION');
+      },
+
+      get timingLabel() {
+        if (this.totalSeconds === null) return '';
+        const total = this.formatSeconds(this.totalSeconds);
+        if (!this.timingHovered || this.llmSeconds === null) {
+          return `Annotated in ${total}s`;
+        }
+        const llm = this.formatSeconds(this.llmSeconds);
+        return `LLM ${llm}s · Total ${total}s`;
       },
 
       get groupedAnnotations() {
@@ -862,12 +876,12 @@
       },
 
       // ── Methods ───────────────────────────────────────────────
+      formatSeconds(value) {
+        return Number(value).toFixed(1);
+      },
+
       displayTitle(ann) {
-        if (ann.terminologyMatchedTerm) {
-          const t = ann.terminologyMatchedTerm;
-          return t.charAt(0).toUpperCase() + t.slice(1);
-        }
-        if (ann.conceptCode && ann.conceptDisplay) {
+        if (ann.conceptDisplay) {
           return ann.conceptDisplay;
         }
         if (ann.normalisedText) {
@@ -882,8 +896,9 @@
         this.loading        = true;
         this.error          = null;
         this.annotations    = [];
-        this.elapsedSeconds = null;
-        const startTime     = Date.now();
+        this.totalSeconds  = null;
+        this.llmSeconds    = null;
+        this.timingHovered = false;
 
         try {
           const response = await fetch('/api/annotate', {
@@ -902,13 +917,14 @@
           }
 
           const data = await response.json();
-          this.annotations = data.map((ann, i) => ({ ...ann, _id: i, status: 'pending' }));
+          this.annotations  = (data.annotations || []).map((ann, i) => ({ ...ann, _id: i, status: 'pending' }));
+          this.totalSeconds = data.totalSeconds ?? null;
+          this.llmSeconds   = data.llmSeconds ?? null;
 
         } catch (e) {
           this.error = e.message || 'An unexpected error occurred. Please try again.';
         } finally {
           this.loading = false;
-          this.elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
         }
       },
 
@@ -921,6 +937,9 @@
         this.annotations = [];
         this.error = null;
         this.hoveredAnnotationId = null;
+        this.totalSeconds = null;
+        this.llmSeconds = null;
+        this.timingHovered = false;
       },
 
       accept(ann)  { ann.status = 'accepted'; },

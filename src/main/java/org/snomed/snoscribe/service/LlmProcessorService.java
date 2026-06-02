@@ -12,6 +12,7 @@ import org.snomed.snoscribe.config.LlmConfig;
 import org.snomed.snoscribe.exception.ServiceException;
 import org.snomed.snoscribe.model.Annotation;
 import org.snomed.snoscribe.model.AnnotationType;
+import org.snomed.snoscribe.model.LlmProcessResult;
 import org.snomed.snoscribe.model.Context;
 import org.snomed.snoscribe.model.Laterality;
 import org.snomed.snoscribe.model.Subject;
@@ -48,15 +49,15 @@ public class LlmProcessorService {
 		systemPrompt = StreamUtils.copyToString(getClass().getClassLoader().getResourceAsStream("annotate-prompt.txt"), StandardCharsets.UTF_8);
 	}
 
-	public List<Annotation> processDocument(String document) throws ServiceException {
+	public LlmProcessResult processDocument(String document) throws ServiceException {
 		return processWithModel(defaultModel, document);
 	}
 
-	public List<Annotation> processDocument(String document, String modelName) throws ServiceException {
+	public LlmProcessResult processDocument(String document, String modelName) throws ServiceException {
 		return processWithModel(llmConfig.buildModel(modelName), document);
 	}
 
-	private List<Annotation> processWithModel(ChatModel model, String document) throws ServiceException {
+	private LlmProcessResult processWithModel(ChatModel model, String document) throws ServiceException {
 		logger.debug("--Request Body Start --");
 		logger.debug(systemPrompt);
 		logger.debug(document);
@@ -68,14 +69,16 @@ public class LlmProcessorService {
 		);
 
 		try {
+			long llmStart = System.currentTimeMillis();
 			String content = model.chat(messages).aiMessage().text();
+			double llmSeconds = round1dp((System.currentTimeMillis() - llmStart) / 1000.0);
 			if (content == null || content.isBlank()) {
 				throw new RuntimeException("No content in LLM response");
 			}
 			String json = stripJsonCodeBlock(content);
 			List<Map<String, Object>> rawList = objectMapper.readValue(json, new TypeReference<>() {});
 			List<Map<String, String>> response = toStringMapList(rawList);
-			return extractContentFromResponse(response);
+			return new LlmProcessResult(extractContentFromResponse(response), llmSeconds);
 		} catch (Exception e) {
 			if (isConnectFailure(e)) {
 				logger.error(LLM_CONNECTION_FAILURE_MESSAGE, e);
@@ -186,6 +189,10 @@ public class LlmProcessorService {
 				logger.warn("Unrecognized laterality: {}", laterality);
 			}
 		}
+	}
+
+	private static double round1dp(double value) {
+		return Math.round(value * 10.0) / 10.0;
 	}
 
 	private void extractContext(Map<String, String> entity, Annotation annotation) {
