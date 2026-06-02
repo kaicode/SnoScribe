@@ -25,6 +25,8 @@ A language model may miss findings or misclassify context (e.g. family history v
 | **Everything in Docker** (Ollama + Infinity + app) | [docs/run/docker-ollama.md](docs/run/docker-ollama.md) |
 | **Docker + cloud LLM** (Infinity + app; Foundry / OpenAI / …) | [docs/run/docker-cloud-llm.md](docs/run/docker-cloud-llm.md) |
 
+The web UI is at **http://localhost:8080** by default (`server.port`; see [configuration](docs/configuration.md)).
+
 ## Development
 
 Working on the code (Maven on the host, Infinity in Docker only, frontend watch mode, evaluation): [docs/development.md](docs/development.md).
