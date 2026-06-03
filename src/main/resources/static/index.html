@@ -335,6 +335,25 @@
           </div>
         </div>
 
+        <!-- Download CSV -->
+        <div class="shrink-0 flex justify-end">
+          <button
+            @click="downloadCsv()"
+            :disabled="exportableCount === 0"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600
+                   hover:bg-slate-50 hover:border-slate-400 text-xs font-medium
+                   disabled:opacity-40 disabled:cursor-not-allowed
+                   transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+          >
+            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download CSV
+          </button>
+        </div>
+
         <!-- Timing -->
         <p x-show="totalSeconds !== null"
            class="shrink-0 text-xs text-slate-400 text-right tabular-nums -mt-2 cursor-default"
@@ -833,6 +852,9 @@
       get totalCount()    { return this.annotations.length; },
       get acceptedCount() { return this.annotations.filter(a => a.status === 'accepted').length; },
       get dismissedCount(){ return this.annotations.filter(a => a.status === 'dismissed').length; },
+      get exportableCount() {
+        return this.annotations.filter(a => a.status !== 'dismissed' && !a.terminologyError).length;
+      },
 
       get segments() {
         return buildSegments(this.notes, this.annotations);
@@ -944,6 +966,38 @@
 
       accept(ann)  { ann.status = 'accepted'; },
       dismiss(ann) { ann.status = 'dismissed'; },
+
+      downloadCsv() {
+        const rows = this.annotations.filter(a => a.status !== 'dismissed' && !a.terminologyError);
+        if (rows.length === 0) return;
+
+        const headers = [
+          'type', 'snomedCode', 'snomedDisplay', 'icd10Code', 'negated', 'subject', 'laterality', 'context',
+          'dose', 'frequency', 'route', 'doseForm'
+        ];
+
+        const escapeCsv = (val) => {
+          if (val == null) return '';
+          const s = String(val);
+          if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+            return '"' + s.replace(/"/g, '""') + '"';
+          }
+          return s;
+        };
+
+        const csv = [
+          headers.join(','),
+          ...rows.map(row => headers.map(h => escapeCsv(row[h])).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'annotations.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
     };
   }
 </script>
