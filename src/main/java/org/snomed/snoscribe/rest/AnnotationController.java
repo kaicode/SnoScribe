@@ -8,6 +8,7 @@ import org.snomed.snoscribe.model.Annotation;
 import org.snomed.snoscribe.model.LlmProcessResult;
 import org.snomed.snoscribe.service.LlmProcessorService;
 import org.snomed.snoscribe.service.SnomedTerminologyService;
+import org.snomed.snoscribe.service.TerminologyTimingRecorder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,14 +41,16 @@ public class AnnotationController {
 		logger.info("LLM returned {} annotations in {}s",
 				annotations.size(), round2dp(llmResult.getLlmSeconds()));
 
-		// Enrich all annotations with SNOMED CT concepts in parallel
-		List<CompletableFuture<Void>> futures = annotations.stream()
-				.map(ann -> CompletableFuture.runAsync(() -> snomedTerminologyService.enrichAnnotation(ann)))
+		List<TerminologyTimingRecorder.Snapshot> timingSnaps = annotations.stream()
+				.map(ann -> CompletableFuture.supplyAsync(() -> snomedTerminologyService.enrichAnnotation(ann)))
+				.map(CompletableFuture::join)
 				.toList();
-		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
 		double totalSeconds = round1dp((System.currentTimeMillis() - totalStart) / 1000.0);
-		return new AnnotateResponse(annotations, totalSeconds, llmResult.getLlmSeconds());
+		double rerankSeconds = round1dp(TerminologyTimingRecorder.sumRerankSeconds(timingSnaps));
+		logger.info("Annotate completed in {}s (LLM {}s, rerank {}s, {} annotations)",
+				round2dp(totalSeconds), round2dp(llmResult.getLlmSeconds()), round2dp(rerankSeconds), annotations.size());
+		return new AnnotateResponse(annotations, totalSeconds, llmResult.getLlmSeconds(), rerankSeconds);
 	}
 
 	private static double round1dp(double value) {

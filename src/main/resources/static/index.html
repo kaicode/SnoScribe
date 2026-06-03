@@ -859,6 +859,7 @@
       hoveredAnnotationId: null,
       totalSeconds:        null,
       llmSeconds:          null,
+      rerankSeconds:       null,
       timingHovered:       false,
 
       // ── Computed getters ──────────────────────────────────────
@@ -885,7 +886,11 @@
           return `Annotated in ${total}s`;
         }
         const llm = this.formatSeconds(this.llmSeconds);
-        return `LLM ${llm}s · Total ${total}s`;
+        const rerank = this.rerankSeconds !== null ? this.formatSeconds(this.rerankSeconds) : null;
+        const parts = [`LLM ${llm}s`];
+        if (rerank !== null) parts.push(`Reranking ${rerank}s`);
+        parts.push(`Total ${total}s`);
+        return parts.join(' · ');
       },
 
       get groupedAnnotations() {
@@ -934,6 +939,7 @@
         this.annotations    = [];
         this.totalSeconds  = null;
         this.llmSeconds    = null;
+        this.rerankSeconds = null;
         this.timingHovered = false;
 
         try {
@@ -956,6 +962,13 @@
           this.annotations  = (data.annotations || []).map((ann, i) => ({ ...ann, _id: i, status: 'pending' }));
           this.totalSeconds = data.totalSeconds ?? null;
           this.llmSeconds   = data.llmSeconds ?? null;
+          this.rerankSeconds = data.rerankSeconds ?? null;
+          console.info(
+            'Annotate completed: %ss total, %ss LLM, %ss rerank',
+            this.formatSeconds(this.totalSeconds),
+            this.formatSeconds(this.llmSeconds),
+            this.formatSeconds(this.rerankSeconds ?? 0)
+          );
 
         } catch (e) {
           this.error = e.message || 'An unexpected error occurred. Please try again.';
@@ -975,6 +988,7 @@
         this.hoveredAnnotationId = null;
         this.totalSeconds = null;
         this.llmSeconds = null;
+        this.rerankSeconds = null;
         this.timingHovered = false;
       },
 

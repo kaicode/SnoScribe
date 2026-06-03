@@ -52,7 +52,13 @@ class InfinityRerankServiceIT {
 		annotation.setType(AnnotationType.CONDITION);
 		annotation.setNormalisedText("latent tuberculosis");
 
-		infinityRerankService.tryRerankBestConcept(annotation, "latent tuberculosis", concepts);
+		TerminologyTimingRecorder timing = new TerminologyTimingRecorder();
+		timing.begin();
+		try {
+			infinityRerankService.tryRerankBestConcept(annotation, "latent tuberculosis", concepts, timing);
+		} finally {
+			timing.finish();
+		}
 
 		assertThat(annotation.getSnomedCode())
 				.as("Infinity should pick a concept whose terms best match the query")
@@ -111,8 +117,7 @@ class InfinityRerankServiceIT {
 			double minScore = Double.parseDouble(System.getenv().getOrDefault("INFINITY_RERANK_MIN_SCORE", "0.01"));
 			int maxConcurrent = Integer.parseInt(
 					System.getenv().getOrDefault("INFINITY_RERANK_MAX_CONCURRENT", "3"));
-			return new InfinityRerankService(objectMapper, baseUrl, model, minScore, maxConcurrent,
-					new TerminologyTimingRecorder());
+			return new InfinityRerankService(objectMapper, baseUrl, model, minScore, maxConcurrent);
 		}
 	}
 }

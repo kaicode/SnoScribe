@@ -7,13 +7,16 @@ public class AnnotateResponse {
 	private List<Annotation> annotations;
 	private double totalSeconds;
 	private double llmSeconds;
+	/** Aggregate Infinity rerank HTTP time during enrichment (may overlap across threads). */
+	private double rerankSeconds;
 
 	public AnnotateResponse() {}
 
-	public AnnotateResponse(List<Annotation> annotations, double totalSeconds, double llmSeconds) {
+	public AnnotateResponse(List<Annotation> annotations, double totalSeconds, double llmSeconds, double rerankSeconds) {
 		this.annotations = annotations;
 		this.totalSeconds = totalSeconds;
 		this.llmSeconds = llmSeconds;
+		this.rerankSeconds = rerankSeconds;
 	}
 
 	public List<Annotation> getAnnotations() {
@@ -38,5 +41,13 @@ public class AnnotateResponse {
 
 	public void setLlmSeconds(double llmSeconds) {
 		this.llmSeconds = llmSeconds;
+	}
+
+	public double getRerankSeconds() {
+		return rerankSeconds;
+	}
+
+	public void setRerankSeconds(double rerankSeconds) {
+		this.rerankSeconds = rerankSeconds;
 	}
 }

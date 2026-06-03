@@ -54,20 +54,17 @@ public class EvaluationRunner implements ApplicationRunner {
 	private final LlmConfig llmConfig;
 	private final LlmProcessorService llmProcessorService;
 	private final SnomedTerminologyService snomedTerminologyService;
-	private final TerminologyTimingRecorder terminologyTimingRecorder;
 	private final ObjectMapper objectMapper;
 
 	public EvaluationRunner(EvaluationConfig config,
 			LlmConfig llmConfig,
 			LlmProcessorService llmProcessorService,
 			SnomedTerminologyService snomedTerminologyService,
-			TerminologyTimingRecorder terminologyTimingRecorder,
 			ObjectMapper objectMapper) {
 		this.config = config;
 		this.llmConfig = llmConfig;
 		this.llmProcessorService = llmProcessorService;
 		this.snomedTerminologyService = snomedTerminologyService;
-		this.terminologyTimingRecorder = terminologyTimingRecorder;
 		this.objectMapper = objectMapper;
 	}
 
@@ -110,24 +107,18 @@ public class EvaluationRunner implements ApplicationRunner {
 					long afterLlm = System.currentTimeMillis();
 
 					// Parallel terminology enrichment (FHIR + optional rerank, synonym LLM, etc.)
-					terminologyTimingRecorder.begin();
-					TerminologyTimingRecorder.Snapshot timingSnap;
-					try {
-						List<CompletableFuture<Void>> futures = annotations.stream()
-								.map(ann -> CompletableFuture.runAsync(
-										() -> snomedTerminologyService.enrichAnnotation(ann)))
-								.collect(Collectors.toList());
-						CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-					} finally {
-						timingSnap = terminologyTimingRecorder.finish();
-					}
+					List<TerminologyTimingRecorder.Snapshot> timingSnaps = annotations.stream()
+							.map(ann -> CompletableFuture.supplyAsync(
+									() -> snomedTerminologyService.enrichAnnotation(ann)))
+							.map(CompletableFuture::join)
+							.toList();
 					long afterFhir = System.currentTimeMillis();
 
 					double totalSeconds = round1dp((afterFhir - totalStart) / 1000.0);
 					double llmSeconds = llmResult.getLlmSeconds();
 					double enrichWallSeconds = round1dp((afterFhir - afterLlm) / 1000.0);
-					double fhirSumSeconds = round1dp(timingSnap.fhirSeconds());
-					double rerankSumSeconds = round1dp(timingSnap.rerankSeconds());
+					double fhirSumSeconds = round1dp(TerminologyTimingRecorder.sumFhirSeconds(timingSnaps));
+					double rerankSumSeconds = round1dp(TerminologyTimingRecorder.sumRerankSeconds(timingSnaps));
 
 					result = new BenchmarkResult(model, noteFileName,
 							new Timings(totalSeconds, llmSeconds, enrichWallSeconds, fhirSumSeconds, rerankSumSeconds),

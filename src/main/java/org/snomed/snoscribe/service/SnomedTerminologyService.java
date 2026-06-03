@@ -11,6 +11,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,14 +35,12 @@ public class SnomedTerminologyService {
 	private final RestTemplate restTemplate;
 	private final InfinityRerankService infinityRerankService;
 	private final TerminologySynonymService terminologySynonymService;
-	private final TerminologyTimingRecorder terminologyTimingRecorder;
 	private final String fhirTxUrl;
 	private final boolean infinityRerankEnabled;
 
 	public SnomedTerminologyService(RestTemplateBuilder builder,
 			InfinityRerankService infinityRerankService,
 			TerminologySynonymService terminologySynonymService,
-			TerminologyTimingRecorder terminologyTimingRecorder,
 			@Value("${fhir.tx.url}") String fhirTxUrl,
 			@Value("${infinity.rerank.enabled:true}") boolean infinityRerankEnabled) {
 		this.restTemplate = builder
@@ -50,7 +49,6 @@ public class SnomedTerminologyService {
 				.build();
 		this.infinityRerankService = infinityRerankService;
 		this.terminologySynonymService = terminologySynonymService;
-		this.terminologyTimingRecorder = terminologyTimingRecorder;
 		this.fhirTxUrl = fhirTxUrl;
 		this.infinityRerankEnabled = infinityRerankEnabled;
 	}
@@ -68,80 +66,88 @@ public class SnomedTerminologyService {
 	 * On failure, the error is logged and {@link Annotation#setTerminologyError} is
 	 * set so the annotation is still returned without a concept.
 	 */
-	public void enrichAnnotation(Annotation annotation) {
+	public TerminologyTimingRecorder.Snapshot enrichAnnotation(Annotation annotation) {
+		TerminologyTimingRecorder timing = new TerminologyTimingRecorder();
+		timing.begin();
 		try {
-			String ecl;
-			String filter;
-
-			if (annotation.getType() == AnnotationType.MEDICATION) {
-				ecl    = MEDICATION_ECL;
-				filter = buildMedicationFilter(annotation);
-			} else if (annotation.getType() == AnnotationType.PROCEDURE) {
-				ecl    = PROCEDURE_ECL;
-				filter = annotation.getNormalisedText();
-			} else {
-				ecl    = CONDITION_ECL;
-				filter = annotation.getNormalisedText();
-			}
-
-			if (filter == null || filter.isBlank()) {
-				return;
-			}
-
-			annotation.setTerminologyError(null);
-
-			// Search for concept (strict, then fuzzy ~)
-			List<FhirConcept> concepts = callFhirExpand(ecl, filter);
-			if (concepts.isEmpty()) {
-				String fuzzy = fuzzyFilter(filter);
-				if (!fuzzy.equals(filter)) {
-					concepts = callFhirExpand(ecl, fuzzy);
-				}
-			}
-
-			String synonymUsedForExpand = null;
-			if (concepts.isEmpty()) {
-				for (String syn : terminologySynonymService.suggestSynonyms(filter, annotation.getType())) {
-					List<FhirConcept> synHits = callFhirExpand(ecl, syn);
-					if (!synHits.isEmpty()) {
-						concepts = synHits;
-						synonymUsedForExpand = syn;
-						break;
-					}
-				}
-			}
-
-			// Does term exactly match any result PT or synonyms?
-			final String synForWhole = synonymUsedForExpand;
-			boolean wholeMatched = concepts.stream()
-					.filter(c -> c.wholeTermFilter(filter) || (synForWhole != null && c.wholeTermFilter(synForWhole)))
-					.findFirst()
-					.map(c -> {
-						annotation.setSnomedCode(c.code);
-						annotation.setSnomedDisplay(c.display);
-						return true;
-					})
-					.orElse(false);
-
-			// Use reranker to find result with same meaning
-			if (!wholeMatched && infinityRerankEnabled && !concepts.isEmpty()) {
-				infinityRerankService.tryRerankBestConcept(annotation, filter, concepts);
-			}
-
-			mapIcd10ForPatientCondition(annotation);
-
+			enrichAnnotation(annotation, timing);
 		} catch (Exception e) {
 			logger.warn("Terminology search failed for '{}': {}", annotation.getNormalisedText(), e.getMessage());
 			String msg = e.getMessage();
 			annotation.setTerminologyError(msg != null && !msg.isBlank() ? msg : e.getClass().getSimpleName());
+		} finally {
+			return timing.finish();
 		}
+	}
+
+	private void enrichAnnotation(Annotation annotation, TerminologyTimingRecorder timing)
+			throws IOException, InterruptedException {
+		String ecl;
+		String filter;
+
+		if (annotation.getType() == AnnotationType.MEDICATION) {
+			ecl    = MEDICATION_ECL;
+			filter = buildMedicationFilter(annotation);
+		} else if (annotation.getType() == AnnotationType.PROCEDURE) {
+			ecl    = PROCEDURE_ECL;
+			filter = annotation.getNormalisedText();
+		} else {
+			ecl    = CONDITION_ECL;
+			filter = annotation.getNormalisedText();
+		}
+
+		if (filter == null || filter.isBlank()) {
+			return;
+		}
+
+		annotation.setTerminologyError(null);
+
+		// Search for concept (strict, then fuzzy ~)
+		List<FhirConcept> concepts = callFhirExpand(ecl, filter, timing);
+		if (concepts.isEmpty()) {
+			String fuzzy = fuzzyFilter(filter);
+			if (!fuzzy.equals(filter)) {
+				concepts = callFhirExpand(ecl, fuzzy, timing);
+			}
+		}
+
+		String synonymUsedForExpand = null;
+		if (concepts.isEmpty()) {
+			for (String syn : terminologySynonymService.suggestSynonyms(filter, annotation.getType())) {
+				List<FhirConcept> synHits = callFhirExpand(ecl, syn, timing);
+				if (!synHits.isEmpty()) {
+					concepts = synHits;
+					synonymUsedForExpand = syn;
+					break;
+				}
+			}
+		}
+
+		// Does term exactly match any result PT or synonyms?
+		final String synForWhole = synonymUsedForExpand;
+		boolean wholeMatched = concepts.stream()
+				.filter(c -> c.wholeTermFilter(filter) || (synForWhole != null && c.wholeTermFilter(synForWhole)))
+				.findFirst()
+				.map(c -> {
+					annotation.setSnomedCode(c.code);
+					annotation.setSnomedDisplay(c.display);
+					return true;
+				})
+				.orElse(false);
+
+		// Use reranker to find result with same meaning
+		if (!wholeMatched && infinityRerankEnabled && !concepts.isEmpty()) {
+			infinityRerankService.tryRerankBestConcept(annotation, filter, concepts, timing);
+		}
+
+		mapIcd10ForPatientCondition(annotation, timing);
 	}
 
 	/**
 	 * For patient conditions with a resolved SNOMED code, maps to ICD-10 via FHIR
 	 * {@code ConceptMap/$translate} when the terminology server provides a match.
 	 */
-	private void mapIcd10ForPatientCondition(Annotation annotation) {
+	private void mapIcd10ForPatientCondition(Annotation annotation, TerminologyTimingRecorder timing) {
 		if (annotation.getType() != AnnotationType.CONDITION) {
 			return;
 		}
@@ -154,7 +160,7 @@ public class SnomedTerminologyService {
 			return;
 		}
 		try {
-			Icd10Mapping mapping = callConceptMapTranslateToIcd10(snomedCode);
+			Icd10Mapping mapping = callConceptMapTranslateToIcd10(snomedCode, timing);
 			if (mapping != null && mapping.code != null && !mapping.code.isBlank()) {
 				annotation.setIcd10Code(mapping.code.trim());
 				if (mapping.display != null && !mapping.display.isBlank()) {
@@ -166,7 +172,7 @@ public class SnomedTerminologyService {
 		}
 	}
 
-	private Icd10Mapping callConceptMapTranslateToIcd10(String snomedCode) {
+	private Icd10Mapping callConceptMapTranslateToIcd10(String snomedCode, TerminologyTimingRecorder timing) {
 		long t0 = System.nanoTime();
 		try {
 			String base = fhirTxUrl.endsWith("/") ? fhirTxUrl.substring(0, fhirTxUrl.length() - 1) : fhirTxUrl;
@@ -202,7 +208,7 @@ public class SnomedTerminologyService {
 			}
 			return null;
 		} finally {
-			terminologyTimingRecorder.addFhirNanos(System.nanoTime() - t0);
+			timing.addFhirNanos(System.nanoTime() - t0);
 		}
 	}
 
@@ -256,7 +262,7 @@ public class SnomedTerminologyService {
 	 * Calls the FHIR ValueSet/$expand endpoint and returns the list of concepts
 	 * from the expansion. Returns an empty list on any error.
 	 */
-	private List<FhirConcept> callFhirExpand(String ecl, String filter) {
+	private List<FhirConcept> callFhirExpand(String ecl, String filter, TerminologyTimingRecorder timing) {
 		long t0 = System.nanoTime();
 		try {
 			// Construct the URL manually to avoid double-encoding of the ECL expression.
@@ -283,7 +289,7 @@ public class SnomedTerminologyService {
 				throw e;
 			}
 		} finally {
-			terminologyTimingRecorder.addFhirNanos(System.nanoTime() - t0);
+			timing.addFhirNanos(System.nanoTime() - t0);
 		}
 	}
 

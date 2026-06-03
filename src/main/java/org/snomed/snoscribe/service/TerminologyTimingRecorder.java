@@ -1,16 +1,14 @@
 package org.snomed.snoscribe.service;
 
-import org.springframework.stereotype.Component;
-
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * When {@link #begin()} / {@link #finish()} bracket parallel terminology enrichment,
- * records aggregate time spent in FHIR HTTP calls vs Infinity rerank HTTP calls
- * (summed across threads; may exceed wall clock when work overlaps).
+ * Per-annotation wall-clock timing for terminology enrichment: FHIR HTTP calls and
+ * Infinity rerank HTTP calls on the thread that runs {@code enrichAnnotation}.
+ * Create one instance per annotation; sum snapshots across annotations for batch totals.
  */
-@Component
 public class TerminologyTimingRecorder {
 
 	private final AtomicBoolean recording = new AtomicBoolean(false);
@@ -48,5 +46,21 @@ public class TerminologyTimingRecorder {
 		public double rerankSeconds() {
 			return rerankNanos / 1_000_000_000.0;
 		}
+	}
+
+	public static double sumFhirSeconds(Collection<Snapshot> snapshots) {
+		long total = 0;
+		for (Snapshot s : snapshots) {
+			total += s.fhirNanos;
+		}
+		return total / 1_000_000_000.0;
+	}
+
+	public static double sumRerankSeconds(Collection<Snapshot> snapshots) {
+		long total = 0;
+		for (Snapshot s : snapshots) {
+			total += s.rerankNanos;
+		}
+		return total / 1_000_000_000.0;
 	}
 }

@@ -41,14 +41,12 @@ public class InfinityRerankService {
 	private final String model;
 	private final double minScore;
 	private final Semaphore rerankConcurrency;
-	private final TerminologyTimingRecorder terminologyTimingRecorder;
 
 	public InfinityRerankService(ObjectMapper objectMapper,
 			@Value("${infinity.rerank.base-url:http://localhost:7997}") String baseUrl,
 			@Value("${infinity.rerank.model:reranker}") String model,
 			@Value("${infinity.rerank.min-score:0.5}") double minScore,
-			@Value("${infinity.rerank.max-concurrent-requests:3}") int maxConcurrentRequests,
-			TerminologyTimingRecorder terminologyTimingRecorder) {
+			@Value("${infinity.rerank.max-concurrent-requests:3}") int maxConcurrentRequests) {
 		this.objectMapper = objectMapper;
 		// HTTP/1.1 only: Java's HttpClient tries h2c upgrade on http:// by default; uvicorn
 		// (Infinity) mishandles that and the POST body can arrive empty → FastAPI 422 "body" required.
@@ -61,7 +59,6 @@ public class InfinityRerankService {
 		this.minScore = minScore;
 		int permits = Math.max(1, maxConcurrentRequests);
 		this.rerankConcurrency = new Semaphore(permits);
-		this.terminologyTimingRecorder = terminologyTimingRecorder;
 	}
 
 	/**
@@ -69,7 +66,7 @@ public class InfinityRerankService {
 	 * assigns the best concept if its score meets the configured minimum.
 	 */
 	public void tryRerankBestConcept(Annotation annotation, String filter,
-			List<FhirConcept> concepts) throws IOException, InterruptedException {
+			List<FhirConcept> concepts, TerminologyTimingRecorder timing) throws IOException, InterruptedException {
 		List<String> documents = new ArrayList<>();
 		List<FhirConcept> docOwner = new ArrayList<>();
 		outer:
@@ -115,7 +112,7 @@ public class InfinityRerankService {
 				throw new IOException("Infinity rerank returned HTTP " + httpResponse.statusCode() + ": " + httpResponse.body());
 			}
 		} finally {
-			terminologyTimingRecorder.addRerankNanos(System.nanoTime() - t0);
+			timing.addRerankNanos(System.nanoTime() - t0);
 			rerankConcurrency.release();
 		}
 
