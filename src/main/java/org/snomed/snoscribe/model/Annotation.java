@@ -9,6 +9,8 @@ public class Annotation {
 	private Subject subject;
 	private Laterality laterality;
 	private Context context;
+	/** Days elapsed since symptom onset; conditions only; {@code null} when not stated. */
+	private Double onsetDays;
 	private String dose;
 	private String frequency;
 	private String route;
@@ -77,6 +79,14 @@ public class Annotation {
 
 	public void setContext(Context context) {
 		this.context = context;
+	}
+
+	public Double getOnsetDays() {
+		return onsetDays;
+	}
+
+	public void setOnsetDays(Double onsetDays) {
+		this.onsetDays = onsetDays;
 	}
 
 	public String getDose() {

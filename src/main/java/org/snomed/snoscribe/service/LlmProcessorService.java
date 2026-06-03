@@ -124,16 +124,16 @@ public class LlmProcessorService {
 			if (entity.containsKey("t")) {
 				Annotation annotation = new Annotation();
 				annotation.setText(entity.get("t"));
+				AnnotationType annotationType = AnnotationType.CONDITION;
 				if (entity.containsKey("type")) {
 					String type = entity.get("type");
 					if ("MEDICATION".equals(type)) {
-						annotation.setType(AnnotationType.MEDICATION);
+						annotationType = AnnotationType.MEDICATION;
 					} else if ("PROCEDURE".equals(type)) {
-						annotation.setType(AnnotationType.PROCEDURE);
-					} else {
-						annotation.setType(AnnotationType.CONDITION);
+						annotationType = AnnotationType.PROCEDURE;
 					}
 				}
+				annotation.setType(annotationType);
 				if (entity.containsKey("n")) {
 					annotation.setNormalisedText(entity.get("n"));
 				}
@@ -155,6 +155,7 @@ public class LlmProcessorService {
 				extractSubject(entity, annotation);
 				extractLaterality(entity, annotation);
 				extractContext(entity, annotation);
+				extractOnsetDays(entity, annotation, annotationType);
 				annotations.add(annotation);
 			}
 		}
@@ -193,6 +194,26 @@ public class LlmProcessorService {
 
 	private static double round1dp(double value) {
 		return Math.round(value * 10.0) / 10.0;
+	}
+
+	private void extractOnsetDays(Map<String, String> entity, Annotation annotation, AnnotationType type) {
+		if (type != AnnotationType.CONDITION || !entity.containsKey("od")) {
+			return;
+		}
+		String raw = entity.get("od");
+		if (raw == null || raw.isBlank()) {
+			return;
+		}
+		try {
+			double days = Double.parseDouble(raw.trim());
+			if (days < 0) {
+				logger.warn("Negative onset days ignored: {}", raw);
+				return;
+			}
+			annotation.setOnsetDays(round1dp(days));
+		} catch (NumberFormatException e) {
+			logger.warn("Unrecognized onset days: {}", raw);
+		}
 	}
 
 	private void extractContext(Map<String, String> entity, Annotation annotation) {

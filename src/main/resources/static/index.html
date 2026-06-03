@@ -502,6 +502,14 @@
                       Negated
                     </span>
 
+                    <!-- Onset badge -->
+                    <span
+                      x-show="ann.onsetDays != null"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                             bg-teal-100 text-teal-800 ring-1 ring-teal-200"
+                      x-text="'Onset: ' + formatOnsetDays(ann.onsetDays) + ' d'"
+                    ></span>
+
                   </div>
 
                   <!-- SNOMED CT + ICD-10 (conditions): compact pills, same line when space allows -->
@@ -803,6 +811,12 @@
     return 'blue';
   }
 
+  function formatOnsetDays(days) {
+    if (days == null) return '';
+    const rounded = Math.round(days * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  }
+
   function buildSegments(notes, annotations) {
     if (!notes) return [];
     if (!annotations || annotations.length === 0) return [{ type: 'text', content: notes }];
@@ -972,7 +986,7 @@
         if (rows.length === 0) return;
 
         const headers = [
-          'type', 'snomedCode', 'snomedDisplay', 'icd10Code', 'negated', 'subject', 'laterality', 'context',
+          'type', 'snomedCode', 'snomedDisplay', 'icd10Code', 'negated', 'subject', 'laterality', 'context', 'onsetDays',
           'dose', 'frequency', 'route', 'doseForm'
         ];
 

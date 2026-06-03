@@ -1,5 +1,7 @@
 package org.snomed.snoscribe.rest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.snoscribe.exception.ServiceException;
 import org.snomed.snoscribe.model.AnnotateResponse;
 import org.snomed.snoscribe.model.Annotation;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 public class AnnotationController {
 
+	private static final Logger logger = LoggerFactory.getLogger(AnnotationController.class);
+
 	private final LlmProcessorService llmProcessorService;
 	private final SnomedTerminologyService snomedTerminologyService;
 
@@ -33,6 +37,8 @@ public class AnnotationController {
 		long totalStart = System.currentTimeMillis();
 		LlmProcessResult llmResult = llmProcessorService.processDocument(request.getDocument());
 		List<Annotation> annotations = llmResult.getAnnotations();
+		logger.info("LLM returned {} annotations in {}s",
+				annotations.size(), round2dp(llmResult.getLlmSeconds()));
 
 		// Enrich all annotations with SNOMED CT concepts in parallel
 		List<CompletableFuture<Void>> futures = annotations.stream()
@@ -46,6 +52,10 @@ public class AnnotationController {
 
 	private static double round1dp(double value) {
 		return Math.round(value * 10.0) / 10.0;
+	}
+
+	private static double round2dp(double value) {
+		return Math.round(value * 100.0) / 100.0;
 	}
 
 	// Inner class for request body

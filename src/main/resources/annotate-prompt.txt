@@ -20,6 +20,10 @@ CONDITION fields:
           Use PATIENT for the patient's own conditions (PMHx, active problems)
 - "l"   : laterality — LEFT | RIGHT | LEFT_AND_RIGHT (omit if not applicable)
 - "c"   : context — CURRENT | HISTORICAL | SUSPECTED
+- "od"  : optional number — days elapsed since symptom onset for this condition; omit if not stated or not convertible
+          Convert when the note gives a duration near the condition: hours ÷ 24, weeks × 7, months × 30
+          Examples: "2 days ago" → 2, "6 hours ago" → 0.3, "3 weeks" → 21
+          Omit for vague "sudden onset" without a number, diagnosis years (e.g. "diagnosed 2015"), or when timing is not tied to this condition
 
 PROCEDURE fields (surgeries, endoscopies, imaging procedures, therapeutic procedures — not medications or diagnoses):
 - "t"   : exact text span from note
@@ -41,7 +45,7 @@ MEDICATION fields:
 
 Output JSON array only:
 [
-  {"type":"CONDITION","t":"<span>","n":"<norm>","neg":0,"s":"PATIENT","c":"CURRENT"},
+  {"type":"CONDITION","t":"<span>","n":"<norm>","neg":0,"s":"PATIENT","c":"CURRENT","od":2},
   {"type":"PROCEDURE","t":"<span>","n":"<procedure>","neg":0,"s":"PATIENT","c":"HISTORICAL"},
   {"type":"MEDICATION","t":"<span>","n":"<drug>","dose":"<dose>","freq":"<freq>","route":"oral","doseForm":"tablet"}
 ]
