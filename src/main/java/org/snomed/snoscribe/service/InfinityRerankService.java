@@ -154,8 +154,8 @@ public class InfinityRerankService {
 		}
 
 		if (best != null && bestScore >= minScore) {
-			annotation.setConceptCode(best.code);
-			annotation.setConceptDisplay(best.display);
+			annotation.setSnomedCode(best.code);
+			annotation.setSnomedDisplay(best.display);
 			String matchedTerm = bestScoringDocumentForConcept(response.results, docOwner, documents, best);
 			annotation.setTerminologyMatchedTerm(matchedTerm);
 			logger.info("Infinity chose '{}' for '{}' score {}", best.display, filter, bestScore);

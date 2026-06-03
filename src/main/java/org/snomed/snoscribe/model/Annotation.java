@@ -13,8 +13,8 @@ public class Annotation {
 	private String frequency;
 	private String route;
 	private String doseForm;
-	private String conceptCode;
-	private String conceptDisplay;
+	private String snomedCode;
+	private String snomedDisplay;
 	/** ICD-10 from ConceptMap $translate when mapping exists (patient conditions only). */
 	private String icd10Code;
 	private String icd10Display;
@@ -111,20 +111,20 @@ public class Annotation {
 		this.doseForm = doseForm;
 	}
 
-	public String getConceptCode() {
-		return conceptCode;
+	public String getSnomedCode() {
+		return snomedCode;
 	}
 
-	public void setConceptCode(String conceptCode) {
-		this.conceptCode = conceptCode;
+	public void setSnomedCode(String snomedCode) {
+		this.snomedCode = snomedCode;
 	}
 
-	public String getConceptDisplay() {
-		return conceptDisplay;
+	public String getSnomedDisplay() {
+		return snomedDisplay;
 	}
 
-	public void setConceptDisplay(String conceptDisplay) {
-		this.conceptDisplay = conceptDisplay;
+	public void setSnomedDisplay(String snomedDisplay) {
+		this.snomedDisplay = snomedDisplay;
 	}
 
 	public String getIcd10Code() {

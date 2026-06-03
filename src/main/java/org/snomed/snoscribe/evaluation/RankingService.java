@@ -28,7 +28,7 @@ import java.util.Objects;
  * <h3>Matching strategy (per note):</h3>
  * <ol>
  *   <li>Pass 1 — match remaining expert annotations to model annotations with the
- *       same non-null {@code conceptCode} (greedy, first-match wins).</li>
+ *       same non-null {@code snomedCode} (greedy, first-match wins).</li>
  *   <li>Pass 2 — match remaining annotations by {@code normalisedText}
  *       (case-insensitive).</li>
  * </ol>
@@ -153,13 +153,13 @@ public class RankingService {
 
 		List<MatchedPair> matches = new ArrayList<>();
 
-		// Pass 1: match by conceptCode (non-null on both sides)
+		// Pass 1: match by snomedCode (non-null on both sides)
 		for (Annotation expert : new ArrayList<>(unmatchedExpert)) {
-			if (expert.getConceptCode() == null || expert.getConceptCode().isBlank()) {
+			if (expert.getSnomedCode() == null || expert.getSnomedCode().isBlank()) {
 				continue;
 			}
 			Annotation matched = unmatchedModel.stream()
-					.filter(m -> expert.getConceptCode().equals(m.getConceptCode()))
+					.filter(m -> expert.getSnomedCode().equals(m.getSnomedCode()))
 					.findFirst()
 					.orElse(null);
 			if (matched != null) {

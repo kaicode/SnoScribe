@@ -487,12 +487,12 @@
 
                   <!-- SNOMED CT + ICD-10 (conditions): compact pills, same line when space allows -->
                   <div
-                    x-show="ann.conceptCode"
+                    x-show="ann.snomedCode"
                     class="flex flex-row flex-wrap items-center gap-1.5 pt-0.5 self-start max-w-full"
                   >
                     <span class="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium
                                  bg-violet-100 text-violet-800 ring-1 ring-violet-200 w-fit"
-                      x-text="'SNOMED CT: ' + ann.conceptCode">
+                      x-text="'SNOMED CT: ' + ann.snomedCode">
                     </span>
                     <span
                       x-show="ann.icd10Code"
@@ -618,10 +618,10 @@
                         </span>
                       </div>
 
-                      <div x-show="ann.conceptCode" class="flex items-center gap-1.5 pt-0.5 self-start">
+                      <div x-show="ann.snomedCode" class="flex items-center gap-1.5 pt-0.5 self-start">
                         <span class="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium
                                      bg-violet-100 text-violet-800 ring-1 ring-violet-200 w-fit"
-                          x-text="'SNOMED CT: ' + ann.conceptCode">
+                          x-text="'SNOMED CT: ' + ann.snomedCode">
                         </span>
                       </div>
 
@@ -734,10 +734,10 @@
                 </div>
 
                 <!-- SNOMED CT concept -->
-                <div x-show="ann.conceptCode" class="flex items-center gap-1.5 pt-0.5 self-start">
+                <div x-show="ann.snomedCode" class="flex items-center gap-1.5 pt-0.5 self-start">
                   <span class="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium
                                bg-violet-100 text-violet-800 ring-1 ring-violet-200 w-fit"
-                    x-text="'SNOMED CT: ' + ann.conceptCode">
+                    x-text="'SNOMED CT: ' + ann.snomedCode">
                   </span>
                 </div>
 
@@ -881,8 +881,8 @@
       },
 
       displayTitle(ann) {
-        if (ann.conceptDisplay) {
-          return ann.conceptDisplay;
+        if (ann.snomedDisplay) {
+          return ann.snomedDisplay;
         }
         if (ann.normalisedText) {
           return ann.normalisedText.charAt(0).toUpperCase() + ann.normalisedText.slice(1);

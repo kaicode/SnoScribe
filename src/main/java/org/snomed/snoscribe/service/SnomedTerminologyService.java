@@ -57,7 +57,7 @@ public class SnomedTerminologyService {
 
 	/**
 	 * Looks up the best-matching SNOMED CT concept for the annotation and sets
-	 * {@code conceptCode} and {@code conceptDisplay} if an exact case-insensitive
+	 * {@code snomedCode} and {@code snomedDisplay} if an exact case-insensitive
 	 * match is found. If the terminology server returns no expansion rows, retries
 	 * with {@code ~} appended to the filter for fuzzy search. If fuzzy still returns
 	 * nothing, asks the LLM for one or two synonyms and searches again with strict
@@ -117,8 +117,8 @@ public class SnomedTerminologyService {
 					.filter(c -> c.wholeTermFilter(filter) || (synForWhole != null && c.wholeTermFilter(synForWhole)))
 					.findFirst()
 					.map(c -> {
-						annotation.setConceptCode(c.code);
-						annotation.setConceptDisplay(c.display);
+						annotation.setSnomedCode(c.code);
+						annotation.setSnomedDisplay(c.display);
 						return true;
 					})
 					.orElse(false);
@@ -149,7 +149,7 @@ public class SnomedTerminologyService {
 		if (subject != null && subject != Subject.PATIENT) {
 			return;
 		}
-		String snomedCode = annotation.getConceptCode();
+		String snomedCode = annotation.getSnomedCode();
 		if (snomedCode == null || snomedCode.isBlank()) {
 			return;
 		}

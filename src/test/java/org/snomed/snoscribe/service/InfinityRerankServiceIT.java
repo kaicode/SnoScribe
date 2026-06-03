@@ -54,16 +54,16 @@ class InfinityRerankServiceIT {
 
 		infinityRerankService.tryRerankBestConcept(annotation, "latent tuberculosis", concepts);
 
-		assertThat(annotation.getConceptCode())
+		assertThat(annotation.getSnomedCode())
 				.as("Infinity should pick a concept whose terms best match the query")
 				.isNotNull()
 				.isNotBlank();
-		assertThat(annotation.getConceptDisplay()).isNotBlank();
+		assertThat(annotation.getSnomedDisplay()).isNotBlank();
 		assertThat(annotation.getTerminologyMatchedTerm())
 				.as("rerank should record the expansion term that scored best")
 				.isNotBlank();
 		assertThat(List.of("111", "222", "333", "444", "555"))
-				.contains(annotation.getConceptCode());
+				.contains(annotation.getSnomedCode());
 	}
 
 	/**
