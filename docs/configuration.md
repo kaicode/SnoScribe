@@ -48,6 +48,7 @@ A host `application.properties` file is **not** read by the container — the im
 |-------|--------|
 | Ollama + Infinity + app | [run/docker-ollama.md](run/docker-ollama.md) |
 | Cloud LLM + Infinity + app | [run/docker-cloud-llm.md](run/docker-cloud-llm.md) |
+| Snowstorm Lite (separate Compose, shared network) | [run/docker-snowstorm-lite.md](run/docker-snowstorm-lite.md) |
 
 ### Property → environment variable
 

@@ -17,7 +17,7 @@ SnoScribe and Infinity run in Docker; the chat model is a **cloud** endpoint (Mi
    cp .env.example .env
    ```
 
-2. Set `FHIR_TX_URL` in `.env` to the base URL of your FHIR terminology server (for example `https://your-tx.example.org/fhir`). The server must support SNOMED CT ValueSet `$expand`; ConceptMap `$translate` is optional but enables ICD-10 mapping for patient conditions. SnoScribe does not bundle terminology — without a reachable TX server, SNOMED enrichment fails and annotations show terminology errors in the UI. See [configuration.md](../configuration.md) (`fhir.tx.url`).
+2. Set `FHIR_TX_URL` in `.env` to the base URL of your FHIR terminology server (for example `https://your-tx.example.org/fhir`). The server must support SNOMED CT ValueSet `$expand`; ConceptMap `$translate` is optional but enables ICD-10 mapping for patient conditions. SnoScribe does not bundle terminology — without a reachable TX server, SNOMED enrichment fails and annotations show terminology errors in the UI. See [configuration.md](../configuration.md) (`fhir.tx.url`). For [Snowstorm Lite in a separate Compose project](docker-snowstorm-lite.md), use `http://snowstorm-lite:8080/fhir`.
 
 3. Set `LLM_PROVIDER` and the matching keys in `.env` (see provider docs below).
 
@@ -58,4 +58,5 @@ curl -sf http://localhost:8080/ >/dev/null && echo OK
 ## See also
 
 - [Configuration reference](../configuration.md)
+- [Snowstorm Lite (separate Docker network)](docker-snowstorm-lite.md)
 - [Local full Docker stack](docker-ollama.md)

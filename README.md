@@ -24,6 +24,7 @@ A language model may miss findings or misclassify context (e.g. family history v
 |------|--------|
 | **Everything in Docker** (Ollama + Infinity + app) | [docs/run/docker-ollama.md](docs/run/docker-ollama.md) |
 | **Docker + cloud LLM** (Infinity + app; Foundry / OpenAI / …) | [docs/run/docker-cloud-llm.md](docs/run/docker-cloud-llm.md) |
+| **Local Snowstorm Lite** (separate Compose, shared network) | [docs/run/docker-snowstorm-lite.md](docs/run/docker-snowstorm-lite.md) |
 
 The web UI is at **http://localhost:8080** by default (`server.port`; see [configuration](docs/configuration.md)).
 
@@ -37,6 +38,7 @@ Working on the code (Maven on the host, Infinity in Docker only, frontend watch 
 |-------|--------|
 | Pipeline overview | [docs/architecture.md](docs/architecture.md) |
 | All properties & env vars | [docs/configuration.md](docs/configuration.md) |
+| Snowstorm Lite in Docker | [docs/run/docker-snowstorm-lite.md](docs/run/docker-snowstorm-lite.md) |
 | LLM providers | [docs/providers/](docs/providers/) |
 | Model benchmarking | [docs/evaluation.md](docs/evaluation.md) |
 

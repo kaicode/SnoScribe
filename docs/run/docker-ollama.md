@@ -17,7 +17,7 @@ SnoScribe, Infinity reranker, and Ollama run in containers. Clinical notes are s
    cp .env.example .env
    ```
 
-2. Set `FHIR_TX_URL` in `.env` to the base URL of your FHIR terminology server (for example `https://your-tx.example.org/fhir`). The server must support SNOMED CT ValueSet `$expand`; ConceptMap `$translate` is optional but enables ICD-10 mapping for patient conditions. SnoScribe does not bundle terminology — without a reachable TX server, SNOMED enrichment fails and annotations show terminology errors in the UI. See [configuration.md](../configuration.md) (`fhir.tx.url`).
+2. Set `FHIR_TX_URL` in `.env` to the base URL of your FHIR terminology server (for example `https://your-tx.example.org/fhir`). The server must support SNOMED CT ValueSet `$expand`; ConceptMap `$translate` is optional but enables ICD-10 mapping for patient conditions. SnoScribe does not bundle terminology — without a reachable TX server, SNOMED enrichment fails and annotations show terminology errors in the UI. See [configuration.md](../configuration.md) (`fhir.tx.url`). For [Snowstorm Lite in a separate Compose project](docker-snowstorm-lite.md), use `http://snowstorm-lite:8080/fhir`.
 
 3. Optionally set `LLM_OLLAMA_MODEL` in `.env` (default `gemma4:e2b`). See [ollama.md](../providers/ollama.md).
 
@@ -58,4 +58,5 @@ curl -s http://localhost:11434/
 
 - [Ollama settings](../providers/ollama.md)
 - [Configuration reference](../configuration.md)
+- [Snowstorm Lite (separate Docker network)](docker-snowstorm-lite.md)
 - [Development on the host](../development.md) — Maven + host Ollama instead of this stack

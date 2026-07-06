@@ -1,0 +1,16 @@
+# Attach SnoScribe to an external Docker network (e.g. shared with Snowstorm Lite).
+# Create the network first: docker network create snomed-net
+# See docs/run/docker-snowstorm-lite.md
+#
+# docker compose -f docker-compose.yml -f docker-compose.ollama.yml -f docker-compose.snomed-net.yml up --build
+# docker compose -f docker-compose.yml -f docker-compose.cloud-llm.yml -f docker-compose.snomed-net.yml up --build
+
+services:
+  snoscribe:
+    networks:
+      - default
+      - snomed-net
+
+networks:
+  snomed-net:
+    external: true
