@@ -84,7 +84,7 @@ Other properties follow the same pattern: uppercase, underscores instead of dots
 
 **You set in `.env`:**
 
-- `FHIR_TX_URL` — required for cloud LLM stack; optional override for Ollama stack (compose default: public Snowstorm Lite demo)
+- `FHIR_TX_URL` — set in `.env` for both stacks (see [run/docker-cloud-llm.md](run/docker-cloud-llm.md) and [run/docker-ollama.md](run/docker-ollama.md))
 - Cloud LLM: `LLM_PROVIDER` and matching `LLM_*` keys — see `.env.example`
 - Ollama stack: optional `LLM_OLLAMA_MODEL` (default `gemma4:e2b`)
 
