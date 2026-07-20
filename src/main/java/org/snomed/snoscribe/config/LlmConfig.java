@@ -11,8 +11,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 @Configuration
 public class LlmConfig {
@@ -72,6 +74,9 @@ public class LlmConfig {
 	@Value("${llm.azure.max-output-tokens:16384}")
 	private int azureMaxOutputTokens;
 
+	@Value("${llm.timeout:#{null}}")
+	private Duration llmTimeout;
+
 	@PostConstruct
 	void validateProviderConfig() {
 		if ("azure".equalsIgnoreCase(provider)) {
@@ -91,36 +96,46 @@ public class LlmConfig {
 	 */
 	public ChatModel buildModel(String modelName) {
 		return switch (provider.toLowerCase()) {
-			case "openai" -> OpenAiChatModel.builder()
-					.apiKey(openAiApiKey)
-					.modelName(modelName)
+			case "openai" -> withTimeout(
+					OpenAiChatModel.builder()
+							.apiKey(openAiApiKey)
+							.modelName(modelName),
+					(b, t) -> b.timeout(t))
 					.build();
-			case "anthropic" -> AnthropicChatModel.builder()
-					.apiKey(anthropicApiKey)
-					.modelName(modelName)
-					.maxTokens(anthropicMaxOutputTokens)
+			case "anthropic" -> withTimeout(
+					AnthropicChatModel.builder()
+							.apiKey(anthropicApiKey)
+							.modelName(modelName)
+							.maxTokens(anthropicMaxOutputTokens),
+					(b, t) -> b.timeout(t))
 					.build();
-			case "google" -> GoogleAiGeminiChatModel.builder()
-					.apiKey(googleApiKey)
-					.modelName(modelName)
+			case "google" -> withTimeout(
+					GoogleAiGeminiChatModel.builder()
+							.apiKey(googleApiKey)
+							.modelName(modelName),
+					(b, t) -> b.timeout(t))
 					.build();
 			case "azure" -> {
 				validateAzureConfig();
-				OpenAiChatModel.OpenAiChatModelBuilder builder = OpenAiChatModel.builder()
-						.baseUrl(stripTrailingSlash(azureBaseUrl))
-						.apiKey(azureApiKey)
-						.modelName(modelName)
-						.maxTokens(azureMaxOutputTokens);
+				OpenAiChatModel.OpenAiChatModelBuilder builder = withTimeout(
+						OpenAiChatModel.builder()
+								.baseUrl(stripTrailingSlash(azureBaseUrl))
+								.apiKey(azureApiKey)
+								.modelName(modelName)
+								.maxTokens(azureMaxOutputTokens),
+						(b, t) -> b.timeout(t));
 				Map<String, String> headers = azureCustomHeaders();
 				if (!headers.isEmpty()) {
 					builder.customHeaders(headers);
 				}
 				yield builder.build();
 			}
-			default -> OllamaChatModel.builder()
-					.baseUrl(ollamaBaseUrl)
-					.modelName(modelName)
-					.think(ollamaThink)
+			default -> withTimeout(
+					OllamaChatModel.builder()
+							.baseUrl(ollamaBaseUrl)
+							.modelName(modelName)
+							.think(ollamaThink),
+					(b, t) -> b.timeout(t))
 					.build();
 		};
 	}
@@ -161,5 +176,12 @@ public class LlmConfig {
 			return url;
 		}
 		return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+	}
+
+	private <B> B withTimeout(B builder, BiFunction<B, Duration, B> timeoutSetter) {
+		if (llmTimeout != null) {
+			return timeoutSetter.apply(builder, llmTimeout);
+		}
+		return builder;
 	}
 }

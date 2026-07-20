@@ -2,6 +2,7 @@ package org.snomed.snoscribe.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.exception.TimeoutException;
 import dev.langchain4j.model.chat.ChatModel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -97,6 +99,42 @@ class LlmConfigAzureTest {
 	}
 
 	@Test
+	void buildModel_timesOutWhenResponseExceedsConfiguredTimeout() throws Exception {
+		server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		int port = server.getAddress().getPort();
+		server.createContext("/v1/chat/completions", exchange -> {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return;
+			}
+			byte[] response = new ObjectMapper().writeValueAsBytes(Map.of(
+					"choices", List.of(Map.of(
+							"message", Map.of(
+									"role", "assistant",
+									"content", "ok")))));
+			exchange.getResponseHeaders().add("Content-Type", "application/json");
+			exchange.sendResponseHeaders(200, response.length);
+			try (OutputStream out = exchange.getResponseBody()) {
+				out.write(response);
+			}
+		});
+		server.start();
+
+		LlmConfig config = azureConfig(
+				"http://127.0.0.1:" + port + "/v1",
+				"key",
+				"",
+				"Qwen/X",
+				Duration.ofMillis(200));
+		ChatModel model = config.buildModel("Qwen/X");
+
+		assertThatThrownBy(() -> model.chat(UserMessage.from("hi")))
+				.isInstanceOf(TimeoutException.class);
+	}
+
+	@Test
 	void validateAzureConfig_requiresBaseUrlApiKeyAndModel() {
 		LlmConfig config = new LlmConfig();
 		ReflectionTestUtils.setField(config, "provider", "azure");
@@ -110,6 +148,11 @@ class LlmConfigAzureTest {
 	}
 
 	private static LlmConfig azureConfig(String baseUrl, String apiKey, String deploymentName, String defaultModel) {
+		return azureConfig(baseUrl, apiKey, deploymentName, defaultModel, null);
+	}
+
+	private static LlmConfig azureConfig(String baseUrl, String apiKey, String deploymentName, String defaultModel,
+			Duration llmTimeout) {
 		LlmConfig config = new LlmConfig();
 		ReflectionTestUtils.setField(config, "provider", "azure");
 		ReflectionTestUtils.setField(config, "azureBaseUrl", baseUrl);
@@ -117,6 +160,7 @@ class LlmConfigAzureTest {
 		ReflectionTestUtils.setField(config, "azureModel", defaultModel);
 		ReflectionTestUtils.setField(config, "azureDeploymentName", deploymentName);
 		ReflectionTestUtils.setField(config, "azureMaxOutputTokens", 16384);
+		ReflectionTestUtils.setField(config, "llmTimeout", llmTimeout);
 		return config;
 	}
 }

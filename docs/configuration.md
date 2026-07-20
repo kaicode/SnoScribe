@@ -13,6 +13,10 @@ Plus provider-specific keys — see [providers/](providers/).
 
 ## LLM providers
 
+| Property | Default | Purpose |
+|----------|---------|---------|
+| `llm.timeout` | unset (LangChain4j: 60s read) | HTTP timeout for all LLM providers (`60s`, `5m`, etc.) |
+
 | Provider | Keys |
 |----------|------|
 | Ollama | `llm.ollama.base-url`, `llm.ollama.model`, optional `llm.ollama.think` |
@@ -56,6 +60,7 @@ A host `application.properties` file is **not** read by the container — the im
 |----------|----------------------|
 | `fhir.tx.url` | `FHIR_TX_URL` |
 | `llm.provider` | `LLM_PROVIDER` |
+| `llm.timeout` | `LLM_TIMEOUT` |
 | `llm.ollama.base-url` | `LLM_OLLAMA_BASE_URL` |
 | `llm.ollama.model` | `LLM_OLLAMA_MODEL` |
 | `llm.ollama.think` | `LLM_OLLAMA_THINK` |
